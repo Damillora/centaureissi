@@ -14,6 +14,7 @@ type Config struct {
 	ImapTlsKeyFile      string
 	InsecureAuth        bool
 	ListenImap          string
+	Debug               bool
 }
 
 var CurrentConfig Config
@@ -44,5 +45,6 @@ func (config *Config) InitializeConfig() {
 	config.ImapTlsCertFile = os.Getenv("IMAP_CERT_FILE")
 	config.ImapTlsKeyFile = os.Getenv("IMAP_KEY_FILE")
 	config.InsecureAuth = strings.ToLower(os.Getenv("INSECURE_AUTH")) == "true"
+	config.Debug = strings.ToLower(os.Getenv("DEBUG")) == "true"
 	config.ListenImap = listenImap
 }

@@ -2,8 +2,10 @@ package imapinterface
 
 import (
 	"crypto/tls"
+	"io"
 	"log"
 	"net"
+	"os"
 
 	"github.com/Damillora/centaureissi/pkg/config"
 	"github.com/Damillora/centaureissi/pkg/services"
@@ -43,6 +45,11 @@ func (cis *CentaureissiImapServer) Initialize() {
 		}
 	}
 
+	var debugWriter io.Writer
+	if config.CurrentConfig.Debug {
+		debugWriter = os.Stdout
+	}
+
 	cis.imapServer = imapserver.New(&imapserver.Options{
 		NewSession: func(conn *imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
 			return NewCentaureissiImapSession(cis.services, cis.tracker), nil, nil
@@ -53,7 +60,7 @@ func (cis *CentaureissiImapServer) Initialize() {
 		},
 		TLSConfig:    tlsConfig,
 		InsecureAuth: insecureAuth,
-		// DebugWriter:  os.Stdout,
+		DebugWriter:  debugWriter,
 	})
 }
 
