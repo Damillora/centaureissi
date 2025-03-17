@@ -48,6 +48,31 @@ func (repo *CentaureissiRepository) UpdateUser(userSchema *schema.User) error {
 	return nil
 }
 
+func (repo *CentaureissiRepository) UpdateMailboxOldNameIndex(mailboxId string, oldName string) error {
+	mbox, err := repo.GetMailboxById(mailboxId)
+	if err != nil {
+		return err
+	}
+	if mbox == nil {
+		return errors.New("mailbox does not exists")
+	}
+
+	err = repo.db.Update(func(tx *bolt.Tx) error {
+		imuin := tx.Bucket([]byte(index_mailbox_user_id_name))
+
+		// Map user ID and mbox name into index
+		err = imuin.Delete([]byte(formatUserIdAndName(mbox.UserId, mbox.Name)))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 func (repo *CentaureissiRepository) UpdateMailbox(mailboxSchema *schema.Mailbox) error {
 	existingMbox, err := repo.ExistsMailboxById(mailboxSchema.Id)
 	if err != nil {
@@ -73,12 +98,55 @@ func (repo *CentaureissiRepository) UpdateMailbox(mailboxSchema *schema.Mailbox)
 
 	err = repo.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket_mailbox))
+		imuin := tx.Bucket([]byte(index_mailbox_user_id_name))
 
 		err := b.Put([]byte(mailboxProto.Id), userData)
 		if err != nil {
 			return err
 		}
 
+		// Map user ID and mbox name into index
+		err = imuin.Put([]byte(formatUserIdAndName(mailboxSchema.UserId, mailboxSchema.Name)), []byte(mailboxSchema.Id))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repo *CentaureissiRepository) UpdateMessage(messageSchema *schema.Message) error {
+	msg, err := repo.ExistsMessageById(messageSchema.Id)
+	if err != nil {
+		return err
+	}
+	if !msg {
+		return errors.New("message does not exists")
+	}
+	messageProto := &pb.Message{
+		Id:        messageSchema.Id,
+		Hash:      messageSchema.Hash,
+		MailboxId: messageSchema.MailboxId,
+		Uid:       messageSchema.Uid,
+		Size:      messageSchema.Size,
+		Flags:     messageSchema.Flags,
+	}
+	messageData, err := proto.Marshal(messageProto)
+	if err != nil {
+		return err
+	}
+
+	err = repo.db.Update(func(tx *bolt.Tx) error {
+		bm := tx.Bucket([]byte(bucket_message))
+		err := bm.Put([]byte(messageSchema.Id), messageData)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {

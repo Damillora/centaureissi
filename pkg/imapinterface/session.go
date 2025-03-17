@@ -2,6 +2,7 @@ package imapinterface
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -14,7 +15,6 @@ import (
 )
 
 func unimplemented() error {
-	panic("unimplemented")
 	return &imap.Error{
 		Type: imap.StatusResponseTypeNo,
 		Code: imap.ResponseCodeCannot,
@@ -40,7 +40,71 @@ func NewCentaureissiImapSession(s *services.CentaureissiService, t *Centaureissi
 
 // Move implements imapserver.SessionIMAP4rev2.
 func (c *CentaureissiImapSession) Move(w *imapserver.MoveWriter, numSet imap.NumSet, dest string) error {
-	return unimplemented()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	mbox, err := c.services.GetMailboxByUserIdAndName(c.user.ID, dest)
+	if err != nil {
+		return err
+	}
+	if mbox == nil {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeNonExistent,
+			Text: "Mailbox does not exist!",
+		}
+	} else if c.mailbox != nil && c.mailbox.mailboxSchema.Id == mbox.Id {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Text: "Source and destination mailboxes are identical",
+		}
+	}
+
+	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	if err != nil {
+		return err
+	}
+
+	expunged := make([]string, 0)
+
+	var sourceUIDs, destUIDs imap.UIDSet
+	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
+		heavyweightMsg := c.hydrateMessage(msg)
+		if heavyweightMsg == nil {
+			return
+		}
+
+		appendData, err := c.appendMsg(mbox, heavyweightMsg.buf, &imap.AppendOptions{
+			Time:  msg.CreatedAt,
+			Flags: flagList(msg),
+		})
+		if err != nil {
+			return
+		}
+		sourceUIDs.AddNum(imap.UID(msg.Uid))
+		destUIDs.AddNum(appendData.UID)
+
+		expunged = append(expunged, msg.Id)
+	})
+
+	seqNums := c.mailbox.expunge(msgs, expunged)
+
+	err = w.WriteCopyData(&imap.CopyData{
+		UIDValidity: mbox.UidValidity,
+		SourceUIDs:  sourceUIDs,
+		DestUIDs:    destUIDs,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, seqNum := range seqNums {
+		if err := w.WriteExpunge(c.mailbox.mailboxSession.EncodeSeqNum(seqNum)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Namespace implements imapserver.SessionIMAP4rev2.
@@ -63,19 +127,24 @@ func (c *CentaureissiImapSession) Append(mailbox string, r imap.LiteralReader, o
 			Text: "Mailbox does not exist!",
 		}
 	}
-
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(r); err != nil {
 		return nil, err
 	}
-	hash, err := c.services.UploadMessageContent(buf.Bytes())
+
+	return c.appendMsg(mbox, buf.Bytes(), options)
+}
+
+func (c *CentaureissiImapSession) appendMsg(mbox *schema.Mailbox, buf []byte, options *imap.AppendOptions) (*imap.AppendData, error) {
+
+	hash, err := c.services.UploadMessageContent(buf)
 	if err != nil {
 		return nil, err
 	}
 
 	msg := &models.MessageCreateModel{
 		Hash:  hash,
-		Size:  uint64(buf.Len()),
+		Size:  uint64(len(buf)),
 		Flags: make(map[string]bool),
 	}
 	for _, flag := range options.Flags {
@@ -90,11 +159,19 @@ func (c *CentaureissiImapSession) Append(mailbox string, r imap.LiteralReader, o
 	// Search Index
 	hydrated := c.hydrateMessage(msgData)
 	indexDoc := hydrated.createSearchDocument()
+	indexDoc.MailboxId = mbox.Id
 
 	err = c.services.IndexSearchDocument(*indexDoc)
 	if err != nil {
 		return nil, err
 	}
+
+	messageCount, err := c.services.CounterMessagesInMailbox(mbox.Id)
+	if err != nil {
+		return nil, err
+	}
+	mboxTracker := c.tracker.TrackMailbox(c.user.ID, mbox.Id)
+	mboxTracker.QueueNumMessages(uint32(messageCount))
 
 	appendData := &imap.AppendData{
 		UID:         imap.UID(msgData.Uid),
@@ -102,7 +179,6 @@ func (c *CentaureissiImapSession) Append(mailbox string, r imap.LiteralReader, o
 	}
 	return appendData, nil
 }
-
 func (c *CentaureissiImapSession) Close() error {
 	// We defer closing
 	return nil
@@ -110,11 +186,60 @@ func (c *CentaureissiImapSession) Close() error {
 
 // Copy implements imapserver.Session.
 func (c *CentaureissiImapSession) Copy(numSet imap.NumSet, dest string) (*imap.CopyData, error) {
-	return nil, unimplemented()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	mbox, err := c.services.GetMailboxByUserIdAndName(c.user.ID, dest)
+	if err != nil {
+		return nil, err
+	}
+	if mbox == nil {
+		return nil, &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Code: imap.ResponseCodeNonExistent,
+			Text: "Mailbox does not exist!",
+		}
+	} else if c.mailbox != nil && c.mailbox.mailboxSchema.Id == mbox.Id {
+		return nil, &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Text: "Source and destination mailboxes are identical",
+		}
+	}
+
+	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	var sourceUIDs, destUIDs imap.UIDSet
+	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
+		heavyweightMsg := c.hydrateMessage(msg)
+		if heavyweightMsg == nil {
+			return
+		}
+
+		appendData, err := c.appendMsg(mbox, heavyweightMsg.buf, &imap.AppendOptions{
+			Time:  msg.CreatedAt,
+			Flags: flagList(msg),
+		})
+		if err != nil {
+			return
+		}
+		sourceUIDs.AddNum(imap.UID(msg.Uid))
+		destUIDs.AddNum(appendData.UID)
+	})
+
+	return &imap.CopyData{
+		UIDValidity: mbox.UidValidity,
+		SourceUIDs:  sourceUIDs,
+		DestUIDs:    destUIDs,
+	}, nil
 }
 
 // Create implements imapserver.Session.
 func (c *CentaureissiImapSession) Create(mailbox string, options *imap.CreateOptions) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	name := strings.TrimRight(mailbox, string(mailboxDelim))
 
@@ -136,6 +261,9 @@ func (c *CentaureissiImapSession) Create(mailbox string, options *imap.CreateOpt
 
 // Delete implements imapserver.Session.
 func (c *CentaureissiImapSession) Delete(mailbox string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	err := c.services.DeleteMailbox(c.user.ID, mailbox)
 	if err != nil {
 		return err
@@ -145,7 +273,28 @@ func (c *CentaureissiImapSession) Delete(mailbox string) error {
 
 // Expunge implements imapserver.Session.
 func (c *CentaureissiImapSession) Expunge(w *imapserver.ExpungeWriter, uids *imap.UIDSet) error {
-	return unimplemented()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	expunged := make([]string, 0)
+	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	if err != nil {
+		return err
+	}
+	for _, msg := range msgs {
+		if uids != nil && !uids.Contains(imap.UID(msg.Uid)) {
+			continue
+		}
+		if _, ok := msg.Flags[string(canonicalFlag(imap.FlagDeleted))]; ok {
+			expunged = append(expunged, msg.Id)
+		}
+	}
+
+	if len(expunged) == 0 {
+		return nil
+	}
+	c.mailbox.expunge(msgs, expunged)
+	return nil
 }
 
 // Fetch implements imapserver.Session.
@@ -159,8 +308,12 @@ func (c *CentaureissiImapSession) Fetch(w *imapserver.FetchWriter, numSet imap.N
 	}
 	mboxTracker := c.tracker.TrackMailbox(c.user.ID, c.mailbox.mailboxSchema.Id)
 
-	var err error
-	c.mailbox.forEach(numSet, func(seqNum uint32, msg *schema.Message) {
+	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	if err != nil {
+		return err
+	}
+
+	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
 		if err != nil {
 			return
 		}
@@ -273,7 +426,16 @@ func (c *CentaureissiImapSession) Poll(w *imapserver.UpdateWriter, allowExpunge 
 
 // Rename implements imapserver.Session.
 func (c *CentaureissiImapSession) Rename(mailbox string, newName string) error {
-	return unimplemented()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	_, err := c.services.GetMailboxByUserIdAndName(c.user.ID, mailbox)
+	if err != nil {
+		return err
+	}
+	c.services.UpdateMailboxName(c.user.ID, mailbox, newName)
+
+	return nil
 }
 
 // Search implements imapserver.Session.
@@ -304,6 +466,7 @@ func (c *CentaureissiImapSession) Select(mailbox string, options *imap.SelectOpt
 	c.mailbox = &CentaureissiImapMailbox{
 		services:       c.services,
 		mailboxSchema:  mbox,
+		mailboxTracker: mboxTracker.MailboxTracker,
 		mailboxSession: mboxTracker.NewSession(),
 	}
 	selectInfo := c.mailbox.GetSelectInfo()
@@ -324,9 +487,22 @@ func (c *CentaureissiImapSession) Status(mailbox string, options *imap.StatusOpt
 		}
 	}
 
+	numMessages, err := c.services.CounterMessagesInMailbox(mbox.Id)
+	if err != nil {
+		return nil, err
+	}
+	numRead, err := c.services.CounterMessagesInMailboxByFlag(mbox.Id, string(canonicalFlag(imap.FlagSeen)))
+	if err != nil {
+		return nil, err
+	}
+	numDeleted, err := c.services.CounterMessagesInMailboxByFlag(mbox.Id, string(canonicalFlag(imap.FlagDeleted)))
+	if err != nil {
+		return nil, err
+	}
+
 	data := imap.StatusData{Mailbox: mbox.Name}
 	if options.NumMessages {
-		num := uint32(0)
+		num := numMessages
 		data.NumMessages = &num
 	}
 	if options.UIDNext {
@@ -337,11 +513,11 @@ func (c *CentaureissiImapSession) Status(mailbox string, options *imap.StatusOpt
 		data.UIDValidity = mbox.UidValidity
 	}
 	if options.NumUnseen {
-		num := uint32(0)
+		num := numMessages - numRead
 		data.NumUnseen = &num
 	}
 	if options.NumDeleted {
-		num := uint32(0)
+		num := numDeleted
 		data.NumDeleted = &num
 	}
 	if options.Size {
@@ -353,7 +529,42 @@ func (c *CentaureissiImapSession) Status(mailbox string, options *imap.StatusOpt
 
 // Store implements imapserver.Session.
 func (c *CentaureissiImapSession) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
-	return unimplemented()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	if err != nil {
+		return err
+	}
+
+	mboxTracker := c.tracker.TrackMailbox(c.user.ID, c.mailbox.mailboxSchema.Id)
+	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
+		switch flags.Op {
+		case imap.StoreFlagsSet:
+			msg.Flags = make(map[string]bool)
+			fallthrough
+		case imap.StoreFlagsAdd:
+			for _, flag := range flags.Flags {
+				msg.Flags[string(canonicalFlag(flag))] = true
+			}
+		case imap.StoreFlagsDel:
+			for _, flag := range flags.Flags {
+				delete(msg.Flags, string(canonicalFlag(flag)))
+			}
+		default:
+			panic(fmt.Errorf("unknown STORE flag operation: %v", flags.Op))
+		}
+
+		c.services.UpdateMessageFlags(msg.Id, &models.MessageUpdateFlagsModel{
+			Flags: msg.Flags,
+		})
+		mboxTracker.QueueMessageFlags(seqNum, imap.UID(msg.Uid), flagList(msg), nil)
+	})
+	if !flags.Silent {
+		c.mutex.Unlock()
+		return c.Fetch(w, numSet, &imap.FetchOptions{Flags: true})
+	}
+	return nil
 }
 
 // Subscribe implements imapserver.Session.
@@ -373,7 +584,15 @@ func (c *CentaureissiImapSession) Subscribe(mailbox string) error {
 
 // Unselect implements imapserver.Session.
 func (c *CentaureissiImapSession) Unselect() error {
-	return unimplemented()
+	if c.mailbox == nil {
+		return &imap.Error{
+			Type: imap.StatusResponseTypeNo,
+			Text: "Mailbox unselected!",
+		}
+	}
+	c.mailbox.mailboxSession.Close()
+	c.mailbox = nil
+	return nil
 }
 
 // Unsubscribe implements imapserver.Session.

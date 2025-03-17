@@ -15,6 +15,9 @@ func (cs *CentaureissiService) Login(username string, password string) *schema.U
 	if err != nil {
 		return nil
 	}
+	if user == nil {
+		return nil
+	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {

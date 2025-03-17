@@ -23,6 +23,7 @@ type Mailbox struct {
 }
 
 type Message struct {
+	Id        string
 	Uid       uint32
 	Hash      string
 	MailboxId string

@@ -73,7 +73,7 @@ func (repo *CentaureissiRepository) CounterMailboxUid(id string) (uint32, error)
 
 	var uid uint32
 	err = repo.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(counter_uidvalidity))
+		b := tx.Bucket([]byte(counter_uid))
 		counterData := b.Get([]byte(id))
 		if counterData == nil {
 			counterData = []byte(uint32ToString(0))
@@ -99,7 +99,7 @@ func (repo *CentaureissiRepository) IncrementMailboxUid(id string) (uint32, erro
 
 	var uid uint32
 	err = repo.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(counter_uidvalidity))
+		b := tx.Bucket([]byte(counter_uid))
 		counterData := b.Get([]byte(id))
 		if counterData == nil {
 			counterData = []byte(uint32ToString(0))
@@ -124,6 +124,31 @@ func (repo *CentaureissiRepository) CounterMessagesInMailbox(mailboxId string) u
 	err := repo.db.View(func(tx *bolt.Tx) error {
 		bmm := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(mailboxId))
 		keyCount = uint32(bmm.Stats().KeyN)
+		return nil
+	})
+	if err != nil {
+		return 0
+	}
+
+	return keyCount
+}
+
+func (repo *CentaureissiRepository) CounterMessagesInMailboxByFlag(mailboxId string, flag string) uint32 {
+	keyCount := uint32(0)
+	err := repo.db.View(func(tx *bolt.Tx) error {
+		bmm := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(mailboxId))
+		c := bmm.Cursor()
+
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			messageId := string(k)
+			msg, err := repo.GetMessageById(messageId)
+			if err != nil {
+				return err
+			}
+			if _, ok := msg.Flags[flag]; ok {
+				keyCount++
+			}
+		}
 		return nil
 	})
 	if err != nil {

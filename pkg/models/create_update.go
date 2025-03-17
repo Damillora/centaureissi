@@ -23,3 +23,7 @@ type MessageCreateModel struct {
 	Size  uint64
 	Flags map[string]bool
 }
+
+type MessageUpdateFlagsModel struct {
+	Flags map[string]bool
+}

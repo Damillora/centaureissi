@@ -44,3 +44,42 @@ func (repo *CentaureissiRepository) DeleteMailbox(mailboxId string) error {
 
 	return nil
 }
+
+func (repo *CentaureissiRepository) DeleteMessage(messageId string) error {
+	msg, err := repo.GetMessageById(messageId)
+	if err != nil {
+		return err
+	}
+	if msg == nil {
+		return errors.New("message does not exists")
+	}
+
+	err = repo.db.Update(func(tx *bolt.Tx) error {
+		bm := tx.Bucket([]byte(bucket_message))
+		bmm := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(msg.MailboxId))
+		immuid := tx.Bucket([]byte(index_message_mailbox_uid))
+
+		// Delete message
+		err := bm.Delete([]byte(msg.Id))
+		if err != nil {
+			return err
+		}
+		// Delete message in mailbox
+		err = bmm.Delete([]byte(msg.Id))
+		if err != nil {
+			return err
+		}
+		// Delete user ID and mbox name index
+		err = immuid.Delete([]byte(formatMailboxIdAndUid(msg.MailboxId, msg.Uid)))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

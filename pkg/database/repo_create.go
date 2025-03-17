@@ -128,6 +128,7 @@ func (repo *CentaureissiRepository) CreateMessage(messageSchema *schema.Message)
 		return errors.New("mailbox does not exists")
 	}
 	messageProto := &pb.Message{
+		Id:        messageSchema.Id,
 		Hash:      messageSchema.Hash,
 		MailboxId: messageSchema.MailboxId,
 		Uid:       messageSchema.Uid,
@@ -145,17 +146,17 @@ func (repo *CentaureissiRepository) CreateMessage(messageSchema *schema.Message)
 		immuid := tx.Bucket([]byte(index_message_mailbox_uid))
 
 		// Insert into Message List
-		err := bm.Put([]byte(messageSchema.Hash), messageData)
+		err := bm.Put([]byte(messageSchema.Id), messageData)
 		if err != nil {
 			return err
 		}
 		// Add into mailbox list
-		err = bmm.Put([]byte(messageSchema.Hash), []byte{})
+		err = bmm.Put([]byte(messageSchema.Id), []byte{})
 		if err != nil {
 			return err
 		}
 		// Map user ID and mbox name into index
-		err = immuid.Put([]byte(formatMailboxIdAndUid(messageSchema.MailboxId, messageSchema.Uid)), []byte(messageSchema.Hash))
+		err = immuid.Put([]byte(formatMailboxIdAndUid(messageSchema.MailboxId, messageSchema.Uid)), []byte(messageSchema.Id))
 		if err != nil {
 			return err
 		}

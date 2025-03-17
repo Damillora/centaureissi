@@ -22,7 +22,7 @@ type CentaureissiImapServer struct {
 func New(s *services.CentaureissiService) *CentaureissiImapServer {
 	imapServer := &CentaureissiImapServer{
 		services: s,
-		tracker:  NewCentaureissiMailboxTracker(),
+		tracker:  NewCentaureissiMailboxTracker(s),
 	}
 	imapServer.Initialize()
 	return imapServer

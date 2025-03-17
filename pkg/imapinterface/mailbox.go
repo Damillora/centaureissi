@@ -1,6 +1,9 @@
 package imapinterface
 
 import (
+	"slices"
+	"sync"
+
 	"github.com/Damillora/centaureissi/pkg/database/schema"
 	"github.com/Damillora/centaureissi/pkg/services"
 	"github.com/emersion/go-imap/v2"
@@ -10,8 +13,10 @@ import (
 type CentaureissiImapMailbox struct {
 	services *services.CentaureissiService
 
+	mutex          sync.Mutex
 	searchRes      imap.UIDSet
 	mailboxSchema  *schema.Mailbox
+	mailboxTracker *imapserver.MailboxTracker
 	mailboxSession *imapserver.SessionTracker
 }
 
@@ -27,24 +32,21 @@ func (cim *CentaureissiImapMailbox) GetSelectInfo() *imap.SelectData {
 		return nil
 	}
 
+	numMessages, _ := cim.services.CounterMessagesInMailbox(cim.mailboxSchema.Id)
+
 	return &imap.SelectData{
 		Flags:          flags,
 		PermanentFlags: permanentFlags,
-		NumMessages:    uint32(0),
+		NumMessages:    numMessages,
 		UIDNext:        imap.UID(currentUID + 1),
 		UIDValidity:    cim.mailboxSchema.UidValidity,
 	}
 }
 
-func (cim *(CentaureissiImapMailbox)) forEach(numSet imap.NumSet, f func(seqNum uint32, msg *schema.Message)) {
-	// TODO: optimize
+func (cim *(CentaureissiImapMailbox)) forEach(messages []*schema.Message, numSet imap.NumSet, f func(seqNum uint32, msg *schema.Message)) {
 
 	numSet = cim.staticNumSet(numSet)
 
-	messages, err := cim.services.ListMessageByMailboxId(cim.mailboxSchema.Id)
-	if err != nil {
-
-	}
 	for i, msg := range messages {
 		seqNum := uint32(i) + 1
 
@@ -108,4 +110,20 @@ func staticNumRange(start, stop *uint32, max uint32) {
 	if dyn && *start > *stop {
 		*start, *stop = *stop, *start
 	}
+}
+
+func (c *CentaureissiImapMailbox) expunge(msgs []*schema.Message, expunged []string) (seqNums []uint32) {
+	// Iterate in reverse order, to keep sequence numbers consistent
+	for i := len(msgs) - 1; i >= 0; i-- {
+		msg := msgs[i]
+		if slices.Contains(expunged, msg.Id) {
+			c.services.DeleteMessage(msg.Id)
+		}
+
+		seqNum := uint32(i) + 1
+		seqNums = append(seqNums, seqNum)
+		c.mailboxTracker.QueueExpunge(seqNum)
+	}
+
+	return seqNums
 }

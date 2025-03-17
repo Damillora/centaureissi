@@ -131,6 +131,7 @@ func (msg *CentaureissiMessage) createSearchDocument() *search.CentaureissiSearc
 	}
 
 	return &search.CentaureissiSearchDocument{
+		Id:      msg.Id,
 		Hash:    msg.Hash,
 		Sender:  strings.Join(sender[:], ", "),
 		From:    strings.Join(from[:], ", "),

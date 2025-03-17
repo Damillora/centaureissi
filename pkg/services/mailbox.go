@@ -97,6 +97,29 @@ func (cs *CentaureissiService) UpdateMailboxSubscribeStatus(userId string, name 
 	return mbox, nil
 }
 
+func (cs *CentaureissiService) UpdateMailboxName(userId string, name string, newName string) (*schema.Mailbox, error) {
+	mbox, err := cs.repository.GetMailboxByUserIdAndName(userId, name)
+	if err != nil {
+		return nil, err
+	}
+	if mbox == nil {
+		// Ignore unsub status for deleted mailbox
+		return nil, nil
+	}
+	mbox.Name = newName
+
+	err = cs.repository.UpdateMailboxOldNameIndex(mbox.Id, name)
+	if err != nil {
+		return nil, err
+	}
+	err = cs.repository.UpdateMailbox(mbox)
+	if err != nil {
+		return nil, err
+	}
+
+	return mbox, nil
+}
+
 func (cs *CentaureissiService) DeleteMailbox(userId string, name string) error {
 	existingMbox, err := cs.repository.GetMailboxByUserIdAndName(userId, name)
 	if err != nil {

@@ -132,10 +132,12 @@ func (repo *CentaureissiRepository) GetMessageById(id string) (*schema.Message, 
 	}
 
 	message := &schema.Message{
-		Hash:  messageProto.Hash,
-		Uid:   messageProto.Uid,
-		Size:  messageProto.Size,
-		Flags: messageProto.Flags,
+		Id:        messageProto.Id,
+		Hash:      messageProto.Hash,
+		MailboxId: messageProto.MailboxId,
+		Uid:       messageProto.Uid,
+		Size:      messageProto.Size,
+		Flags:     messageProto.Flags,
 	}
 
 	return message, nil

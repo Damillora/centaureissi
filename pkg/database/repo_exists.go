@@ -60,3 +60,18 @@ func (repo *CentaureissiRepository) ExistsMailboxByUserIdAndName(userId string, 
 
 	return mailboxId != nil, nil
 }
+
+func (repo *CentaureissiRepository) ExistsMessageById(id string) (bool, error) {
+	var messageId []byte
+	// Read data bytes from DB
+	err := repo.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket_message))
+		messageId = b.Get([]byte(id))
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return messageId != nil, nil
+}

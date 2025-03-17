@@ -16,7 +16,7 @@ func (repo *CentaureissiRepository) ListMailboxesByUserId(id string) ([]*schema.
 		return nil, errors.New("user not found")
 	}
 
-	var mailboxes []*schema.Mailbox
+	mailboxes := make([]*schema.Mailbox, 0)
 	repo.db.View(func(tx *bolt.Tx) error {
 		mb := tx.Bucket([]byte(bucket_user_mailbox)).Bucket([]byte(id))
 
@@ -44,7 +44,7 @@ func (repo *CentaureissiRepository) ListMessagesByMailboxId(id string) ([]*schem
 		return nil, errors.New("mailbox not found")
 	}
 
-	var messages []*schema.Message
+	messages := make([]*schema.Message, 0)
 	repo.db.View(func(tx *bolt.Tx) error {
 		mb := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(id))
 
@@ -56,7 +56,9 @@ func (repo *CentaureissiRepository) ListMessagesByMailboxId(id string) ([]*schem
 			if err != nil {
 				return err
 			}
-			messages = append(messages, message)
+			if message != nil {
+				messages = append(messages, message)
+			}
 		}
 		return nil
 	})
