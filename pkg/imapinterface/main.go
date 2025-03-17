@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"log"
 	"net"
-	"os"
 
 	"github.com/Damillora/centaureissi/pkg/config"
 	"github.com/Damillora/centaureissi/pkg/services"
@@ -54,7 +53,7 @@ func (cis *CentaureissiImapServer) Initialize() {
 		},
 		TLSConfig:    tlsConfig,
 		InsecureAuth: insecureAuth,
-		DebugWriter:  os.Stdout,
+		// DebugWriter:  os.Stdout,
 	})
 }
 
