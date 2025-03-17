@@ -64,12 +64,13 @@ func (cs *CentaureissiService) CreateMailbox(userId string, name string) (*schem
 	}
 
 	mbox := &schema.Mailbox{
-		ID:          uuid.NewString(),
+		Id:          uuid.NewString(),
+		UserId:      userId,
 		Name:        name,
 		UidValidity: uidValidity,
 		Subscribed:  false,
 	}
-	err = cs.repository.CreateMailbox(userId, mbox)
+	err = cs.repository.CreateMailbox(mbox)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +84,8 @@ func (cs *CentaureissiService) UpdateMailboxSubscribeStatus(userId string, name 
 		return nil, err
 	}
 	if mbox == nil {
-		return nil, errors.New("mailbox does not exist")
-
+		// Ignore unsub status for deleted mailbox
+		return nil, nil
 	}
 
 	mbox.Subscribed = subscribed
@@ -94,4 +95,20 @@ func (cs *CentaureissiService) UpdateMailboxSubscribeStatus(userId string, name 
 	}
 
 	return mbox, nil
+}
+
+func (cs *CentaureissiService) DeleteMailbox(userId string, name string) error {
+	existingMbox, err := cs.repository.GetMailboxByUserIdAndName(userId, name)
+	if err != nil {
+		return err
+	}
+	if existingMbox == nil {
+		return errors.New("mailbox does not exists")
+	}
+	err = cs.repository.DeleteMailbox(existingMbox.Id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

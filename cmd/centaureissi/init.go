@@ -23,13 +23,9 @@ func Initialize() {
 	config.CurrentConfig.InitializeConfig()
 
 	dataDir := config.CurrentConfig.DataDirectory
-	blobDir := config.CurrentConfig.BlobDirectory
 
 	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
 		os.Mkdir(dataDir, 0755)
-	}
-	if _, err := os.Stat(blobDir); os.IsNotExist(err) {
-		os.Mkdir(blobDir, 0755)
 	}
 
 	Repository = database.New()

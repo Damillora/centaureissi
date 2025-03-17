@@ -79,7 +79,8 @@ func (repo *CentaureissiRepository) GetMailboxById(id string) (*schema.Mailbox, 
 	}
 
 	mailbox := &schema.Mailbox{
-		ID:          mailboxProto.Id,
+		Id:          mailboxProto.Id,
+		UserId:      mailboxProto.UserId,
 		UidValidity: mailboxProto.UidValidity,
 		Name:        mailboxProto.Name,
 		Subscribed:  mailboxProto.Subscribed,

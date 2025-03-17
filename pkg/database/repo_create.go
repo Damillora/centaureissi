@@ -33,6 +33,7 @@ func (repo *CentaureissiRepository) CreateUser(userSchema *schema.User) error {
 
 	err = repo.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket_user))
+		bm := tx.Bucket([]byte(bucket_user_mailbox))
 		err = b.Put([]byte(userProto.Id), userData)
 		if err != nil {
 			return err
@@ -43,7 +44,8 @@ func (repo *CentaureissiRepository) CreateUser(userSchema *schema.User) error {
 		if err != nil {
 			return err
 		}
-		_, err = b.CreateBucketIfNotExists([]byte(bucket_user_mailbox))
+		// Create bucket for mailboxes
+		_, err = bm.CreateBucketIfNotExists([]byte(userSchema.ID))
 		if err != nil {
 			return err
 		}
@@ -58,8 +60,8 @@ func (repo *CentaureissiRepository) CreateUser(userSchema *schema.User) error {
 	return nil
 }
 
-func (repo *CentaureissiRepository) CreateMailbox(userId string, mailboxSchema *schema.Mailbox) error {
-	user, err := repo.GetUserById(userId)
+func (repo *CentaureissiRepository) CreateMailbox(mailboxSchema *schema.Mailbox) error {
+	user, err := repo.GetUserById(mailboxSchema.UserId)
 	if err != nil {
 		return err
 	}
@@ -68,7 +70,8 @@ func (repo *CentaureissiRepository) CreateMailbox(userId string, mailboxSchema *
 	}
 
 	mailboxProto := &pb.Mailbox{
-		Id:          mailboxSchema.ID,
+		Id:          mailboxSchema.Id,
+		UserId:      mailboxSchema.UserId,
 		Name:        mailboxSchema.Name,
 		UidValidity: mailboxSchema.UidValidity,
 		Subscribed:  mailboxSchema.Subscribed,
@@ -81,28 +84,28 @@ func (repo *CentaureissiRepository) CreateMailbox(userId string, mailboxSchema *
 	}
 
 	err = repo.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket_user))
 		bm := tx.Bucket([]byte(bucket_mailbox))
-		bum := b.Bucket([]byte(bucket_user_mailbox))
+		bum := tx.Bucket([]byte(bucket_user_mailbox)).Bucket([]byte(mailboxSchema.UserId))
+		bmm := tx.Bucket([]byte(bucket_mailbox_message))
 		imuin := tx.Bucket([]byte(index_mailbox_user_id_name))
 
 		// Insert into Mailbox
-		err := bm.Put([]byte(mailboxSchema.ID), mailboxData)
+		err := bm.Put([]byte(mailboxSchema.Id), mailboxData)
 		if err != nil {
 			return err
 		}
 		// Add into User's mailbox list
-		err = bum.Put([]byte(mailboxSchema.ID), []byte{})
+		err = bum.Put([]byte(mailboxSchema.Id), []byte(mailboxSchema.UserId))
 		if err != nil {
 			return err
 		}
 		// Map user ID and mbox name into index
-		err = imuin.Put([]byte(formatUserIdAndName(userId, mailboxSchema.Name)), []byte(mailboxSchema.ID))
+		err = imuin.Put([]byte(formatUserIdAndName(mailboxSchema.UserId, mailboxSchema.Name)), []byte(mailboxSchema.Id))
 		if err != nil {
 			return err
 		}
 		// Create bucket for messages
-		_, err = bm.CreateBucketIfNotExists([]byte(bucket_mailbox_message))
+		_, err = bmm.CreateBucketIfNotExists([]byte(mailboxSchema.Id))
 		if err != nil {
 			return err
 		}
@@ -116,8 +119,8 @@ func (repo *CentaureissiRepository) CreateMailbox(userId string, mailboxSchema *
 	return nil
 }
 
-func (repo *CentaureissiRepository) CreateMessage(mailboxId string, messageSchema *schema.Message) error {
-	mailbox, err := repo.GetMailboxById(mailboxId)
+func (repo *CentaureissiRepository) CreateMessage(messageSchema *schema.Message) error {
+	mailbox, err := repo.GetMailboxById(messageSchema.MailboxId)
 	if err != nil {
 		return err
 	}
@@ -125,10 +128,11 @@ func (repo *CentaureissiRepository) CreateMessage(mailboxId string, messageSchem
 		return errors.New("mailbox does not exists")
 	}
 	messageProto := &pb.Message{
-		Hash:  messageSchema.Hash,
-		Uid:   messageSchema.Uid,
-		Size:  messageSchema.Size,
-		Flags: messageSchema.Flags,
+		Hash:      messageSchema.Hash,
+		MailboxId: messageSchema.MailboxId,
+		Uid:       messageSchema.Uid,
+		Size:      messageSchema.Size,
+		Flags:     messageSchema.Flags,
 	}
 	messageData, err := proto.Marshal(messageProto)
 	if err != nil {
@@ -136,9 +140,8 @@ func (repo *CentaureissiRepository) CreateMessage(mailboxId string, messageSchem
 	}
 
 	err = repo.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket_mailbox))
 		bm := tx.Bucket([]byte(bucket_message))
-		bmm := b.Bucket([]byte(bucket_mailbox_message))
+		bmm := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(messageSchema.MailboxId))
 		immuid := tx.Bucket([]byte(index_message_mailbox_uid))
 
 		// Insert into Message List
@@ -152,7 +155,7 @@ func (repo *CentaureissiRepository) CreateMessage(mailboxId string, messageSchem
 			return err
 		}
 		// Map user ID and mbox name into index
-		err = immuid.Put([]byte(formatMailboxIdAndUid(mailboxId, messageSchema.Uid)), []byte(messageSchema.Hash))
+		err = immuid.Put([]byte(formatMailboxIdAndUid(messageSchema.MailboxId, messageSchema.Uid)), []byte(messageSchema.Hash))
 		if err != nil {
 			return err
 		}

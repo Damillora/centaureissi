@@ -17,22 +17,24 @@ message User {
 
 message Mailbox {
     string id = 1;
-    uint32 uid_validity = 2;
-    string name = 3;
-    bool subscribed = 4;
+    string user_id = 2;
+    uint32 uid_validity = 3;
+    string name = 4;
+    bool subscribed = 5;
     
-	google.protobuf.Timestamp created_at = 5;
-    google.protobuf.Timestamp updated_at = 6;
+	google.protobuf.Timestamp created_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
 }
 
 message Message {
     uint32 uid = 1;
     string hash = 2;
-    uint64 size = 3;
-    map<string, bool> flags = 4;
+    string mailbox_id = 3;
+    uint64 size = 4;
+    map<string, bool> flags = 5;
 
-	google.protobuf.Timestamp created_at = 5;
-    google.protobuf.Timestamp updated_at = 6;
+	google.protobuf.Timestamp created_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
 }
 
 message MessageHeader {

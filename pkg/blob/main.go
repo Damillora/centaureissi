@@ -21,7 +21,7 @@ func New() *CentaureissiBlobRepository {
 }
 
 func (cbr *CentaureissiBlobRepository) Initialize() {
-	databaseUrl := config.CurrentConfig.DataDirectory + "/blobs.db"
+	databaseUrl := config.CurrentConfig.DataDirectory + "/blobs.bolt"
 
 	dbConn, err := bolt.Open(databaseUrl, 0600, nil)
 	if err != nil {

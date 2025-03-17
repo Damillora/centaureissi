@@ -22,7 +22,7 @@ func (cim *CentaureissiImapMailbox) GetSelectInfo() *imap.SelectData {
 	copy(permanentFlags, flags)
 	permanentFlags = append(permanentFlags, imap.FlagWildcard)
 
-	currentUID, err := cim.services.CounterMailboxUid(cim.mailboxSchema.ID)
+	currentUID, err := cim.services.CounterMailboxUid(cim.mailboxSchema.Id)
 	if err != nil {
 		return nil
 	}
@@ -41,7 +41,7 @@ func (cim *(CentaureissiImapMailbox)) forEach(numSet imap.NumSet, f func(seqNum 
 
 	numSet = cim.staticNumSet(numSet)
 
-	messages, err := cim.services.ListMessageByMailboxId(cim.mailboxSchema.ID)
+	messages, err := cim.services.ListMessageByMailboxId(cim.mailboxSchema.Id)
 	if err != nil {
 
 	}
@@ -77,14 +77,14 @@ func (cim *CentaureissiImapMailbox) staticNumSet(numSet imap.NumSet) imap.NumSet
 
 	switch numSet := numSet.(type) {
 	case imap.SeqSet:
-		maxSeqSet, _ := cim.services.CounterMessagesInMailbox(cim.mailboxSchema.ID)
+		maxSeqSet, _ := cim.services.CounterMessagesInMailbox(cim.mailboxSchema.Id)
 		max := uint32(maxSeqSet)
 		for i := range numSet {
 			r := &numSet[i]
 			staticNumRange(&r.Start, &r.Stop, max)
 		}
 	case imap.UIDSet:
-		maxIdSet, _ := cim.services.CounterMailboxUidNext(cim.mailboxSchema.ID)
+		maxIdSet, _ := cim.services.CounterMailboxUidNext(cim.mailboxSchema.Id)
 		max := uint32(maxIdSet) - 1
 		for i := range numSet {
 			r := &numSet[i]

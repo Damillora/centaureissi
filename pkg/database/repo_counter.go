@@ -122,8 +122,7 @@ func (repo *CentaureissiRepository) IncrementMailboxUid(id string) (uint32, erro
 func (repo *CentaureissiRepository) CounterMessagesInMailbox(mailboxId string) uint32 {
 	var keyCount uint32
 	err := repo.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket_mailbox))
-		bmm := b.Bucket([]byte(bucket_mailbox_message))
+		bmm := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(mailboxId))
 		keyCount = uint32(bmm.Stats().KeyN)
 		return nil
 	})

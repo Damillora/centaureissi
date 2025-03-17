@@ -30,16 +30,17 @@ func (cs *CentaureissiService) GetMessageContent(hash string) ([]byte, error) {
 func (cs *CentaureissiService) UploadMessage(mailboxId string, msg *models.MessageCreateModel) (*schema.Message, error) {
 	uid, err := cs.IncrementMailboxUid(mailboxId)
 	msgData := &schema.Message{
-		Hash:  msg.Hash,
-		Uid:   uid,
-		Size:  msg.Size,
-		Flags: msg.Flags,
+		Hash:      msg.Hash,
+		MailboxId: mailboxId,
+		Uid:       uid,
+		Size:      msg.Size,
+		Flags:     msg.Flags,
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	err = cs.repository.CreateMessage(mailboxId, msgData)
+	err = cs.repository.CreateMessage(msgData)
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ func New() *CentaureissiRepository {
 }
 
 func (cdb *CentaureissiRepository) Initialize() {
-	databaseUrl := config.CurrentConfig.DataDirectory + "/centaureissi.db"
+	databaseUrl := config.CurrentConfig.DataDirectory + "/centaureissi.bolt"
 
 	dbConn, err := bolt.Open(databaseUrl, 0600, nil)
 	if err != nil {
@@ -40,6 +40,14 @@ func (cdb *CentaureissiRepository) Initialize() {
 		_, err = tx.CreateBucketIfNotExists([]byte(bucket_message))
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte(bucket_user_mailbox))
+		if err != nil {
+			return err
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte(bucket_mailbox_message))
+		if err != nil {
+			return err
 		}
 
 		// Indexes

@@ -21,7 +21,7 @@ func New() *CentaureissiSearchEngine {
 }
 
 func (cse *CentaureissiSearchEngine) Initialize() {
-	databaseUrl := config.CurrentConfig.DataDirectory + "/search.db"
+	databaseUrl := config.CurrentConfig.DataDirectory + "/search"
 	mapping := bleve.NewIndexMapping()
 
 	_, err := os.Stat(databaseUrl)

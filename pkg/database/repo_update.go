@@ -49,7 +49,7 @@ func (repo *CentaureissiRepository) UpdateUser(userSchema *schema.User) error {
 }
 
 func (repo *CentaureissiRepository) UpdateMailbox(mailboxSchema *schema.Mailbox) error {
-	existingMbox, err := repo.ExistsMailboxById(mailboxSchema.ID)
+	existingMbox, err := repo.ExistsMailboxById(mailboxSchema.Id)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,8 @@ func (repo *CentaureissiRepository) UpdateMailbox(mailboxSchema *schema.Mailbox)
 	}
 
 	mailboxProto := &pb.Mailbox{
-		Id:          mailboxSchema.ID,
+		Id:          mailboxSchema.Id,
+		UserId:      mailboxSchema.UserId,
 		Name:        mailboxSchema.Name,
 		UidValidity: mailboxSchema.UidValidity,
 		Subscribed:  mailboxSchema.Subscribed,

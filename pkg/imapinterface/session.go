@@ -14,6 +14,7 @@ import (
 )
 
 func unimplemented() error {
+	panic("unimplemented")
 	return &imap.Error{
 		Type: imap.StatusResponseTypeNo,
 		Code: imap.ResponseCodeCannot,
@@ -44,7 +45,9 @@ func (c *CentaureissiImapSession) Move(w *imapserver.MoveWriter, numSet imap.Num
 
 // Namespace implements imapserver.SessionIMAP4rev2.
 func (c *CentaureissiImapSession) Namespace() (*imap.NamespaceData, error) {
-	return nil, unimplemented()
+	return &imap.NamespaceData{
+		Personal: []imap.NamespaceDescriptor{{Delim: mailboxDelim}},
+	}, nil
 }
 
 // Append implements imapserver.Session.
@@ -79,7 +82,7 @@ func (c *CentaureissiImapSession) Append(mailbox string, r imap.LiteralReader, o
 		msg.Flags[string(canonicalFlag(flag))] = true
 	}
 
-	msgData, err := c.services.UploadMessage(mbox.ID, msg)
+	msgData, err := c.services.UploadMessage(mbox.Id, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +136,11 @@ func (c *CentaureissiImapSession) Create(mailbox string, options *imap.CreateOpt
 
 // Delete implements imapserver.Session.
 func (c *CentaureissiImapSession) Delete(mailbox string) error {
-	return unimplemented()
+	err := c.services.DeleteMailbox(c.user.ID, mailbox)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Expunge implements imapserver.Session.
@@ -150,7 +157,7 @@ func (c *CentaureissiImapSession) Fetch(w *imapserver.FetchWriter, numSet imap.N
 			break
 		}
 	}
-	mboxTracker := c.tracker.TrackMailbox(c.user.ID, c.mailbox.mailboxSchema.ID)
+	mboxTracker := c.tracker.TrackMailbox(c.user.ID, c.mailbox.mailboxSchema.Id)
 
 	var err error
 	c.mailbox.forEach(numSet, func(seqNum uint32, msg *schema.Message) {
@@ -293,7 +300,7 @@ func (c *CentaureissiImapSession) Select(mailbox string, options *imap.SelectOpt
 			Text: "Mailbox does not exist!",
 		}
 	}
-	mboxTracker := c.tracker.TrackMailbox(c.user.ID, mbox.ID)
+	mboxTracker := c.tracker.TrackMailbox(c.user.ID, mbox.Id)
 	c.mailbox = &CentaureissiImapMailbox{
 		services:       c.services,
 		mailboxSchema:  mbox,
@@ -323,7 +330,7 @@ func (c *CentaureissiImapSession) Status(mailbox string, options *imap.StatusOpt
 		data.NumMessages = &num
 	}
 	if options.UIDNext {
-		uid, _ := c.services.CounterMailboxUid(mbox.ID)
+		uid, _ := c.services.CounterMailboxUid(mbox.Id)
 		data.UIDNext = imap.UID(uid + 1)
 	}
 	if options.UIDValidity {

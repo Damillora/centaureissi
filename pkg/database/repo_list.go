@@ -18,8 +18,7 @@ func (repo *CentaureissiRepository) ListMailboxesByUserId(id string) ([]*schema.
 
 	var mailboxes []*schema.Mailbox
 	repo.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket_user))
-		mb := b.Bucket([]byte(bucket_user_mailbox))
+		mb := tx.Bucket([]byte(bucket_user_mailbox)).Bucket([]byte(id))
 
 		c := mb.Cursor()
 
@@ -47,8 +46,7 @@ func (repo *CentaureissiRepository) ListMessagesByMailboxId(id string) ([]*schem
 
 	var messages []*schema.Message
 	repo.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket_mailbox))
-		mb := b.Bucket([]byte(bucket_mailbox_message))
+		mb := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(id))
 
 		c := mb.Cursor()
 
