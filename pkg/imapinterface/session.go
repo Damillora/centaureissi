@@ -529,9 +529,6 @@ func (c *CentaureissiImapSession) Status(mailbox string, options *imap.StatusOpt
 
 // Store implements imapserver.Session.
 func (c *CentaureissiImapSession) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
 	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
 	if err != nil {
 		return err
@@ -561,7 +558,6 @@ func (c *CentaureissiImapSession) Store(w *imapserver.FetchWriter, numSet imap.N
 		mboxTracker.QueueMessageFlags(seqNum, imap.UID(msg.Uid), flagList(msg), nil)
 	})
 	if !flags.Silent {
-		c.mutex.Unlock()
 		return c.Fetch(w, numSet, &imap.FetchOptions{Flags: true})
 	}
 	return nil
