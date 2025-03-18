@@ -161,7 +161,7 @@ func (c *CentaureissiImapSession) appendMsg(mbox *schema.Mailbox, buf []byte, op
 	indexDoc := hydrated.createSearchDocument()
 	indexDoc.MailboxId = mbox.Id
 
-	err = c.services.IndexSearchDocument(*indexDoc)
+	err = c.services.IndexSearchDocument(indexDoc)
 	if err != nil {
 		return nil, err
 	}

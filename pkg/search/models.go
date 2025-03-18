@@ -33,5 +33,4 @@ type CentaureissiSearchResult struct {
 	Bcc     string
 	Subject string
 	Date    string
-	Content string
 }

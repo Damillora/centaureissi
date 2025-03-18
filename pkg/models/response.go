@@ -29,5 +29,4 @@ type SearchResponseItem struct {
 	Bcc     string `json:"bcc"`
 	Subject string `json:"subject"`
 	Date    string `json:"date"`
-	Content string `json:"content"`
 }

@@ -44,7 +44,6 @@ func (cse *CentaureissiSearchEngine) Search(userId string, q string) (*Centaurei
 			Bcc:     hit.Fields["Bcc"].(string),
 			Subject: hit.Fields["Subject"].(string),
 			Date:    hit.Fields["Date"].(string),
-			Content: hit.Fields["Content"].(string),
 		}
 		searchResult = append(searchResult, item)
 	}

@@ -63,8 +63,22 @@ func (cs *CentaureissiService) UploadMessageContent(content []byte) (string, err
 	return hash, nil
 }
 
-func (cs *CentaureissiService) IndexSearchDocument(msg search.CentaureissiSearchDocument) error {
-	err := cs.search.Index(msg)
+func (cs *CentaureissiService) IndexSearchDocument(msg *models.MessageIndexModel) error {
+	doc := &search.CentaureissiSearchDocument{
+		Id:        msg.Id,
+		Hash:      msg.Hash,
+		UserId:    msg.UserId,
+		MailboxId: msg.MailboxId,
+		Sender:    msg.Sender,
+		From:      msg.From,
+		To:        msg.To,
+		Cc:        msg.Cc,
+		Bcc:       msg.Bcc,
+		Subject:   msg.Subject,
+		Date:      msg.Date,
+		Content:   msg.Content,
+	}
+	err := cs.search.Index(*doc)
 	if err != nil {
 		return err
 	}
@@ -115,7 +129,6 @@ func (cs *CentaureissiService) SearchMessages(userId string, q string) (*models.
 			Bcc:       hit.Bcc,
 			Subject:   hit.Subject,
 			Date:      hit.Date,
-			Content:   hit.Content,
 		}
 		hits = append(hits, item)
 	}

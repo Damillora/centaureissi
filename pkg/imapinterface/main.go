@@ -11,7 +11,6 @@ import (
 	"github.com/Damillora/centaureissi/pkg/services"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapserver"
-	_ "github.com/emersion/go-message/charset"
 )
 
 type CentaureissiImapServer struct {

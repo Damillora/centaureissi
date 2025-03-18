@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"github.com/Damillora/centaureissi/pkg/database/schema"
-	"github.com/Damillora/centaureissi/pkg/search"
+	"github.com/Damillora/centaureissi/pkg/html2text"
+	"github.com/Damillora/centaureissi/pkg/models"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapserver"
+	_ "github.com/emersion/go-message/charset"
 	"github.com/emersion/go-message/mail"
 	"github.com/emersion/go-message/textproto"
 )
@@ -82,7 +84,7 @@ func (msg *CentaureissiMessage) envelope() *imap.Envelope {
 	return imapserver.ExtractEnvelope(header)
 }
 
-func (msg *CentaureissiMessage) createSearchDocument() *search.CentaureissiSearchDocument {
+func (msg *CentaureissiMessage) createSearchDocument() *models.MessageIndexModel {
 	envelope := msg.envelope()
 	var sender []string
 	for _, senderAddr := range envelope.Sender {
@@ -122,7 +124,8 @@ func (msg *CentaureissiMessage) createSearchDocument() *search.CentaureissiSearc
 		switch h := p.Header.(type) {
 		case *mail.InlineHeader:
 			b, _ := io.ReadAll(p.Body)
-			contents += string(b)
+			plaintext := html2text.Parse(string(b))
+			contents += string(plaintext)
 			contents += "\n"
 		case *mail.AttachmentHeader:
 			filename, _ := h.Filename()
@@ -130,7 +133,7 @@ func (msg *CentaureissiMessage) createSearchDocument() *search.CentaureissiSearc
 		}
 	}
 
-	return &search.CentaureissiSearchDocument{
+	return &models.MessageIndexModel{
 		Id:      msg.Id,
 		Hash:    msg.Hash,
 		Sender:  strings.Join(sender[:], ", "),
