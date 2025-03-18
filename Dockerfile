@@ -1,9 +1,9 @@
-# Web client
-# FROM node:20-alpine AS node_build
-# WORKDIR /src
-# COPY . .
-# WORKDIR /src/pkg/web
-# RUN npm ci && npm run build
+Web client
+FROM node:20-alpine AS node_build
+WORKDIR /src
+COPY . .
+WORKDIR /src/pkg/web
+RUN npm ci && npm run build
 
 # Go application
 FROM golang:1.24-alpine AS build
