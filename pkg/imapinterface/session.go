@@ -536,6 +536,10 @@ func (c *CentaureissiImapSession) Store(w *imapserver.FetchWriter, numSet imap.N
 
 	mboxTracker := c.tracker.TrackMailbox(c.user.ID, c.mailbox.mailboxSchema.Id)
 	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
+		if msg.Flags == nil {
+			msg.Flags = make(map[string]bool)
+		}
+
 		switch flags.Op {
 		case imap.StoreFlagsSet:
 			msg.Flags = make(map[string]bool)
