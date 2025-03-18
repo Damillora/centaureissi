@@ -17,7 +17,7 @@ type SearchResponse struct {
 	Hits       []*SearchResponseItem `json:"items"`
 	Page       int                   `json:"page"`
 	TotalPages int                   `json:"totalPages"`
-	Count      int                   `json:"total"`
+	Count      uint64                `json:"total"`
 }
 
 type SearchResponseItem struct {

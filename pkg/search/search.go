@@ -20,10 +20,12 @@ func (cse *CentaureissiSearchEngine) Unindex(msgId string) error {
 	return nil
 }
 
-func (cse *CentaureissiSearchEngine) Search(userId string, q string) (*CentaureissiSearchResponse, error) {
+func (cse *CentaureissiSearchEngine) Search(userId string, q string, page int, perPage int) (*CentaureissiSearchResponse, error) {
 	allFields, _ := cse.index.Fields()
 	query := bleve.NewQueryStringQuery(q)
-	searchReq := bleve.NewSearchRequest(query)
+	itemCount := perPage
+	from := itemCount * (page - 1)
+	searchReq := bleve.NewSearchRequestOptions(query, itemCount, from, false)
 	searchReq.Fields = allFields
 	result, err := cse.index.Search(searchReq)
 	if err != nil {
@@ -49,7 +51,8 @@ func (cse *CentaureissiSearchEngine) Search(userId string, q string) (*Centaurei
 	}
 
 	response := &CentaureissiSearchResponse{
-		Hits: searchResult,
+		Hits:  searchResult,
+		Total: result.Total,
 	}
 	return response, nil
 }

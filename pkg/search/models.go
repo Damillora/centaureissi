@@ -18,7 +18,8 @@ type CentaureissiSearchDocument struct {
 	Content string
 }
 type CentaureissiSearchResponse struct {
-	Hits []*CentaureissiSearchResult
+	Hits  []*CentaureissiSearchResult
+	Total uint64
 }
 
 type CentaureissiSearchResult struct {

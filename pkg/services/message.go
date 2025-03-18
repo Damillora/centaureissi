@@ -113,20 +113,20 @@ func (cs *CentaureissiService) DeleteMessage(msgId string) error {
 
 func (cs *CentaureissiService) SearchMessages(userId string, q string, page int, perPage int) (*models.SearchResponse, error) {
 
-	result, err := cs.search.Search(userId, q)
+	result, err := cs.search.Search(userId, q, page, perPage)
 	if err != nil {
 		return nil, err
 	}
 	hits := make([]*models.SearchResponseItem, 0)
-	hitCount := len(result.Hits)
+	hitCount := result.Total
 
-	totalPages := (hitCount / perPage)
-	if hitCount%perPage > 0 {
+	totalPages := (hitCount / uint64(perPage))
+	if hitCount%uint64(perPage) > 0 {
 		totalPages++
 	}
 
-	lowerBound := (page - 1) * perPage
-	upperBound := page * perPage
+	lowerBound := uint64((page - 1) * perPage)
+	upperBound := uint64(page * perPage)
 	if lowerBound <= hitCount {
 		if upperBound > hitCount {
 			upperBound = hitCount
@@ -151,8 +151,8 @@ func (cs *CentaureissiService) SearchMessages(userId string, q string, page int,
 	response := &models.SearchResponse{
 		Hits:       hits,
 		Page:       page,
-		TotalPages: totalPages,
-		Count:      len(result.Hits),
+		TotalPages: int(totalPages),
+		Count:      result.Total,
 	}
 	return response, nil
 }
