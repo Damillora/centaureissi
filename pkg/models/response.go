@@ -14,7 +14,10 @@ type UserProfileResponse struct {
 }
 
 type SearchResponse struct {
-	Hits []*SearchResponseItem `json:"items"`
+	Hits       []*SearchResponseItem `json:"items"`
+	Page       int                   `json:"page"`
+	TotalPages int                   `json:"totalPages"`
+	Count      int                   `json:"total"`
 }
 
 type SearchResponseItem struct {

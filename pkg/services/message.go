@@ -111,29 +111,44 @@ func (cs *CentaureissiService) DeleteMessage(msgId string) error {
 	return nil
 }
 
-func (cs *CentaureissiService) SearchMessages(userId string, q string) (*models.SearchResponse, error) {
+func (cs *CentaureissiService) SearchMessages(userId string, q string, page int, perPage int) (*models.SearchResponse, error) {
+
 	result, err := cs.search.Search(userId, q)
 	if err != nil {
 		return nil, err
 	}
 	hits := make([]*models.SearchResponseItem, 0)
-	for _, hit := range result.Hits {
-		item := &models.SearchResponseItem{
-			Id:        hit.Id,
-			Hash:      hit.Hash,
-			MailboxId: hit.MailboxId,
-			Sender:    hit.Sender,
-			From:      hit.From,
-			To:        hit.To,
-			Cc:        hit.Cc,
-			Bcc:       hit.Bcc,
-			Subject:   hit.Subject,
-			Date:      hit.Date,
+	hitCount := len(result.Hits)
+
+	totalPages := (hitCount / perPage) + 1
+	lowerBound := (page - 1) * perPage
+	upperBound := page * perPage
+	if lowerBound <= hitCount {
+		if upperBound > hitCount {
+			upperBound = hitCount
 		}
-		hits = append(hits, item)
+		for _, hit := range result.Hits[lowerBound:upperBound] {
+			item := &models.SearchResponseItem{
+				Id:        hit.Id,
+				Hash:      hit.Hash,
+				MailboxId: hit.MailboxId,
+				Sender:    hit.Sender,
+				From:      hit.From,
+				To:        hit.To,
+				Cc:        hit.Cc,
+				Bcc:       hit.Bcc,
+				Subject:   hit.Subject,
+				Date:      hit.Date,
+			}
+			hits = append(hits, item)
+		}
 	}
+
 	response := &models.SearchResponse{
-		Hits: hits,
+		Hits:       hits,
+		Page:       page,
+		TotalPages: totalPages,
+		Count:      len(result.Hits),
 	}
 	return response, nil
 }
