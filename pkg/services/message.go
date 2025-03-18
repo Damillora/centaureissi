@@ -131,7 +131,7 @@ func (cs *CentaureissiService) SearchMessages(userId string, q string, page int,
 		if upperBound > hitCount {
 			upperBound = hitCount
 		}
-		for _, hit := range result.Hits[lowerBound:upperBound] {
+		for _, hit := range result.Hits {
 			item := &models.SearchResponseItem{
 				Id:        hit.Id,
 				Hash:      hit.Hash,
