@@ -120,7 +120,11 @@ func (cs *CentaureissiService) SearchMessages(userId string, q string, page int,
 	hits := make([]*models.SearchResponseItem, 0)
 	hitCount := len(result.Hits)
 
-	totalPages := (hitCount / perPage) + 1
+	totalPages := (hitCount / perPage)
+	if hitCount%perPage > 0 {
+		totalPages++
+	}
+
 	lowerBound := (page - 1) * perPage
 	upperBound := page * perPage
 	if lowerBound <= hitCount {
