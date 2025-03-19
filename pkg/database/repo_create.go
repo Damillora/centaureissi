@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/Damillora/centaureissi/pkg/database/pb"
 	"github.com/Damillora/centaureissi/pkg/database/schema"
@@ -144,6 +145,7 @@ func (repo *CentaureissiRepository) CreateMessage(messageSchema *schema.Message)
 		bm := tx.Bucket([]byte(bucket_message))
 		bmm := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(messageSchema.MailboxId))
 		immuid := tx.Bucket([]byte(index_message_mailbox_uid))
+		imiu := tx.Bucket([]byte(index_message_id_uid))
 
 		// Insert into Message List
 		err := bm.Put([]byte(messageSchema.Id), messageData)
@@ -157,6 +159,11 @@ func (repo *CentaureissiRepository) CreateMessage(messageSchema *schema.Message)
 		}
 		// Map user ID and mbox name into index
 		err = immuid.Put([]byte(formatMailboxIdAndUid(messageSchema.MailboxId, messageSchema.Uid)), []byte(messageSchema.Id))
+		if err != nil {
+			return err
+		}
+		// Map message ID to UID
+		err = imiu.Put([]byte(messageSchema.Id), []byte(strconv.FormatInt(int64(messageSchema.Uid), 10)))
 		if err != nil {
 			return err
 		}

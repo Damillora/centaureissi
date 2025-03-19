@@ -22,7 +22,7 @@ func (repo *CentaureissiRepository) Migrate() error {
 			return err
 		}
 
-		err = migration20250319001_messageUidIndex(tx, b)
+		err = migration20250319001_messageIdUidIndex(tx, b)
 		if err != nil {
 			return err
 		}
@@ -91,13 +91,13 @@ func migration20250317001_initial(tx *bolt.Tx, migrations *bolt.Bucket) error {
 	return nil
 }
 
-func migration20250319001_messageUidIndex(tx *bolt.Tx, migrations *bolt.Bucket) error {
-	migration := migrations.Get([]byte("20250319001_messageUidIndex"))
+func migration20250319001_messageIdUidIndex(tx *bolt.Tx, migrations *bolt.Bucket) error {
+	migration := migrations.Get([]byte("20250319001_messageIdUidIndex"))
 	if migration != nil {
-		log.Println("migration 20250319001_messageUidIndex done")
+		log.Println("migration 20250319001_messageIdUidIndex done")
 		return nil
 	}
-	log.Println("running migration 20250319001_messageUidIndex...")
+	log.Println("running migration 20250319001_messageIdUidIndex...")
 
 	b := tx.Bucket([]byte(bucket_user))
 	messages := tx.Bucket([]byte(bucket_message))

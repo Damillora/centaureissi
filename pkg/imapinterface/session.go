@@ -324,18 +324,22 @@ func (c *CentaureissiImapSession) Fetch(w *imapserver.FetchWriter, numSet imap.N
 			return
 		}
 
-		if err != nil {
-			return
-		}
-
 		if markSeen {
+			msg.Flags[string(canonicalFlag(imap.FlagSeen))] = true
+			c.services.UpdateMessageFlags(msg.Id, &models.MessageUpdateFlagsModel{
+				Flags: msg.Flags,
+			})
 			mboxTracker.QueueMessageFlags(seqNum, imap.UID(msgItem.Uid), flagList(msg.Message), nil)
 		}
 
 		respWriter := w.CreateMessage(c.mailbox.mailboxSession.EncodeSeqNum(seqNum))
+
 		err = msg.fetch(respWriter, options)
+		if err != nil {
+			return
+		}
 	})
-	return err
+	return nil
 }
 
 // Idle implements imapserver.Session.
