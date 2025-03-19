@@ -33,3 +33,13 @@ type SearchResponseItem struct {
 	Subject string `json:"subject"`
 	Date    string `json:"date"`
 }
+
+type CentaureissiStatsResponse struct {
+	Version        string `json:"version"`
+	DbSize         uint64 `json:"dbSize"`
+	MailboxCount   uint64 `json:"mailboxCount"`
+	MessageCount   uint64 `json:"messageCount"`
+	BlobDbSize     uint64 `json:"blobDbSize"`
+	BlobCount      uint64 `json:"blobCount"`
+	SearchDocCount uint64 `json:"searchDocCount"`
+}

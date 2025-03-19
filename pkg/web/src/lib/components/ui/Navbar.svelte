@@ -50,6 +50,9 @@
                 </a>
                 {#if loggedIn}
                     <div class="navbar-dropdown is-right">
+                        <a href="/stats" class="navbar-item">
+                            Stats
+                        </a>
                         <a href="/user/profile" class="navbar-item">
                             Profile
                         </a>

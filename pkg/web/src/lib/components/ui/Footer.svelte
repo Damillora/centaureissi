@@ -5,7 +5,7 @@
 <footer class="footer">
     <div class="content has-text-centered">
       <p>
-        <strong><a href="https://github.com/Damillora/centaureissi">centaureissi</a></strong>: a booru-style image gallery and organizer
+        <strong><a href="https://github.com/Damillora/centaureissi">centaureissi</a></strong>: overly simple email archiving solution
       </p>
       <p>version {version}</p>
     </div>

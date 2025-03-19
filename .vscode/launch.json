@@ -13,7 +13,8 @@
             "env": {
                 "DATA_DIR": "${workspaceFolder}/data",
                 "IMAP_LISTEN": "localhost:1443",
-                "INSECURE_AUTH": "true"
+                "INSECURE_AUTH": "true",
+                "DEBUG": "true"
             }
         }
     ]

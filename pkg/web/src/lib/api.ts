@@ -112,3 +112,17 @@ export async function search({ q, page, perPage }: {q: any, page: any, perPage?:
     return response.data;
 
 }
+
+export async function stats() {
+    let endpoint = url + "/api/stats";
+
+    const response = await axios({
+        url: endpoint,
+        method: "GET",
+        headers: {
+            'Authorization': 'Bearer ' + current_token,
+        },
+        withCredentials: true,
+    })
+    return response.data;
+}
