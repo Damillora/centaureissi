@@ -1,6 +1,8 @@
 package database
 
 import (
+	"strconv"
+
 	"github.com/Damillora/centaureissi/pkg/database/pb"
 	"github.com/Damillora/centaureissi/pkg/database/schema"
 	bolt "go.etcd.io/bbolt"
@@ -141,4 +143,27 @@ func (repo *CentaureissiRepository) GetMessageById(id string) (*schema.Message, 
 	}
 
 	return message, nil
+}
+
+func (repo *CentaureissiRepository) GetMessageUidById(id string) (uint32, error) {
+	var uid uint32
+	// Read data bytes from DB
+	err := repo.db.View(func(tx *bolt.Tx) error {
+		imiu := tx.Bucket([]byte(index_message_id_uid))
+		idString := imiu.Get([]byte(id))
+		if idString == nil {
+			return nil
+		}
+		uidValue, err := strconv.Atoi(string(idString))
+		if err != nil {
+			return err
+		}
+		uid = uint32(uidValue)
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return uid, nil
 }

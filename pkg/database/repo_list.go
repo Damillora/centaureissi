@@ -35,7 +35,7 @@ func (repo *CentaureissiRepository) ListMailboxesByUserId(id string) ([]*schema.
 	return mailboxes, nil
 }
 
-func (repo *CentaureissiRepository) ListMessagesByMailboxId(id string) ([]*schema.Message, error) {
+func (repo *CentaureissiRepository) ListMessageIdsByMailboxId(id string) ([]string, error) {
 	exists, err := repo.ExistsMailboxById(id)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (repo *CentaureissiRepository) ListMessagesByMailboxId(id string) ([]*schem
 		return nil, errors.New("mailbox not found")
 	}
 
-	messages := make([]*schema.Message, 0)
+	messages := make([]string, 0)
 	repo.db.View(func(tx *bolt.Tx) error {
 		mb := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(id))
 
@@ -52,12 +52,12 @@ func (repo *CentaureissiRepository) ListMessagesByMailboxId(id string) ([]*schem
 
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			messageId := string(k)
-			message, err := repo.GetMessageById(messageId)
+			message, err := repo.ExistsMessageById(messageId)
 			if err != nil {
 				return err
 			}
-			if message != nil {
-				messages = append(messages, message)
+			if message {
+				messages = append(messages, messageId)
 			}
 		}
 		return nil

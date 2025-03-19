@@ -10,6 +10,8 @@ const bucket_mailbox_message = "mailboxes.message"
 const index_user_username = "users.username"
 const index_mailbox_user_id_name = "mailbox.user_id_name"
 const index_message_mailbox_uid = "messages.mailbox_uid"
+const index_message_id_uid = "messages.id_uid"
+const index_message_id_hash = "messages.id_hash"
 
 const counter_uidvalidity = "counters.uidvalidity"
 

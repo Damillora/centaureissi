@@ -60,7 +60,7 @@ func (c *CentaureissiImapSession) Move(w *imapserver.MoveWriter, numSet imap.Num
 		}
 	}
 
-	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	msgs, err := c.services.ListMessageUidsByMailboxId(c.mailbox.mailboxSchema.Id)
 	if err != nil {
 		return err
 	}
@@ -68,23 +68,23 @@ func (c *CentaureissiImapSession) Move(w *imapserver.MoveWriter, numSet imap.Num
 	expunged := make([]string, 0)
 
 	var sourceUIDs, destUIDs imap.UIDSet
-	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
-		heavyweightMsg := c.hydrateMessage(msg)
-		if heavyweightMsg == nil {
+	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msgItem *models.MessageUidListItem) {
+		msg := c.hydrateMessage(msgItem)
+		if msg == nil {
 			return
 		}
 
-		appendData, err := c.appendMsg(mbox, heavyweightMsg.buf, &imap.AppendOptions{
+		appendData, err := c.appendMsg(mbox, msg.buf, &imap.AppendOptions{
 			Time:  msg.CreatedAt,
-			Flags: flagList(msg),
+			Flags: flagList(msg.Message),
 		})
 		if err != nil {
 			return
 		}
-		sourceUIDs.AddNum(imap.UID(msg.Uid))
+		sourceUIDs.AddNum(imap.UID(msgItem.Uid))
 		destUIDs.AddNum(appendData.UID)
 
-		expunged = append(expunged, msg.Id)
+		expunged = append(expunged, msgItem.Id)
 	})
 
 	seqNums := c.mailbox.expunge(msgs, expunged)
@@ -206,21 +206,21 @@ func (c *CentaureissiImapSession) Copy(numSet imap.NumSet, dest string) (*imap.C
 		}
 	}
 
-	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	msgs, err := c.services.ListMessageUidsByMailboxId(c.mailbox.mailboxSchema.Id)
 	if err != nil {
 		return nil, err
 	}
 
 	var sourceUIDs, destUIDs imap.UIDSet
-	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
-		heavyweightMsg := c.hydrateMessage(msg)
-		if heavyweightMsg == nil {
+	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msgItem *models.MessageUidListItem) {
+		msg := c.hydrateMessage(msgItem)
+		if msg == nil {
 			return
 		}
 
-		appendData, err := c.appendMsg(mbox, heavyweightMsg.buf, &imap.AppendOptions{
+		appendData, err := c.appendMsg(mbox, msg.buf, &imap.AppendOptions{
 			Time:  msg.CreatedAt,
-			Flags: flagList(msg),
+			Flags: flagList(msg.Message),
 		})
 		if err != nil {
 			return
@@ -277,11 +277,16 @@ func (c *CentaureissiImapSession) Expunge(w *imapserver.ExpungeWriter, uids *ima
 	defer c.mutex.Unlock()
 
 	expunged := make([]string, 0)
-	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	msgs, err := c.services.ListMessageUidsByMailboxId(c.mailbox.mailboxSchema.Id)
 	if err != nil {
 		return err
 	}
-	for _, msg := range msgs {
+	for _, msgItem := range msgs {
+		msg, err := c.services.GetMessageById(msgItem.Id)
+		if err != nil {
+			return err
+		}
+
 		if uids != nil && !uids.Contains(imap.UID(msg.Uid)) {
 			continue
 		}
@@ -308,27 +313,27 @@ func (c *CentaureissiImapSession) Fetch(w *imapserver.FetchWriter, numSet imap.N
 	}
 	mboxTracker := c.tracker.TrackMailbox(c.user.ID, c.mailbox.mailboxSchema.Id)
 
-	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	msgs, err := c.services.ListMessageUidsByMailboxId(c.mailbox.mailboxSchema.Id)
 	if err != nil {
 		return err
 	}
 
-	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
+	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msgItem *models.MessageUidListItem) {
+		msg := c.hydrateMessage(msgItem)
+		if msg == nil {
+			return
+		}
+
 		if err != nil {
 			return
 		}
 
 		if markSeen {
-			mboxTracker.QueueMessageFlags(seqNum, imap.UID(msg.Uid), flagList(msg), nil)
+			mboxTracker.QueueMessageFlags(seqNum, imap.UID(msgItem.Uid), flagList(msg.Message), nil)
 		}
 
 		respWriter := w.CreateMessage(c.mailbox.mailboxSession.EncodeSeqNum(seqNum))
-
-		heavyweightMsg := c.hydrateMessage(msg)
-		if heavyweightMsg == nil {
-			return
-		}
-		err = heavyweightMsg.fetch(respWriter, options)
+		err = msg.fetch(respWriter, options)
 	})
 	return err
 }
@@ -529,13 +534,17 @@ func (c *CentaureissiImapSession) Status(mailbox string, options *imap.StatusOpt
 
 // Store implements imapserver.Session.
 func (c *CentaureissiImapSession) Store(w *imapserver.FetchWriter, numSet imap.NumSet, flags *imap.StoreFlags, options *imap.StoreOptions) error {
-	msgs, err := c.services.ListMessageByMailboxId(c.mailbox.mailboxSchema.Id)
+	msgs, err := c.services.ListMessageUidsByMailboxId(c.mailbox.mailboxSchema.Id)
 	if err != nil {
 		return err
 	}
 
 	mboxTracker := c.tracker.TrackMailbox(c.user.ID, c.mailbox.mailboxSchema.Id)
-	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msg *schema.Message) {
+	c.mailbox.forEach(msgs, numSet, func(seqNum uint32, msgItem *models.MessageUidListItem) {
+		msg, err := c.services.GetMessageById(msgItem.Id)
+		if err != nil {
+			return
+		}
 		if msg.Flags == nil {
 			msg.Flags = make(map[string]bool)
 		}

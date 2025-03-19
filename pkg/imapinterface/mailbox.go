@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/Damillora/centaureissi/pkg/database/schema"
+	"github.com/Damillora/centaureissi/pkg/models"
 	"github.com/Damillora/centaureissi/pkg/services"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapserver"
@@ -43,7 +44,7 @@ func (cim *CentaureissiImapMailbox) GetSelectInfo() *imap.SelectData {
 	}
 }
 
-func (cim *(CentaureissiImapMailbox)) forEach(messages []*schema.Message, numSet imap.NumSet, f func(seqNum uint32, msg *schema.Message)) {
+func (cim *(CentaureissiImapMailbox)) forEach(messages []*models.MessageUidListItem, numSet imap.NumSet, f func(seqNum uint32, msg *models.MessageUidListItem)) {
 
 	numSet = cim.staticNumSet(numSet)
 
@@ -112,17 +113,16 @@ func staticNumRange(start, stop *uint32, max uint32) {
 	}
 }
 
-func (c *CentaureissiImapMailbox) expunge(msgs []*schema.Message, expunged []string) (seqNums []uint32) {
+func (c *CentaureissiImapMailbox) expunge(msgs []*models.MessageUidListItem, expunged []string) (seqNums []uint32) {
 	// Iterate in reverse order, to keep sequence numbers consistent
 	for i := len(msgs) - 1; i >= 0; i-- {
 		msg := msgs[i]
+		seqNum := uint32(i) + 1
 		if slices.Contains(expunged, msg.Id) {
 			c.services.DeleteMessage(msg.Id)
+			seqNums = append(seqNums, seqNum)
+			c.mailboxTracker.QueueExpunge(seqNum)
 		}
-
-		seqNum := uint32(i) + 1
-		seqNums = append(seqNums, seqNum)
-		c.mailboxTracker.QueueExpunge(seqNum)
 	}
 
 	return seqNums

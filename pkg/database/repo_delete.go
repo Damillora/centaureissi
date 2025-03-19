@@ -58,6 +58,7 @@ func (repo *CentaureissiRepository) DeleteMessage(messageId string) error {
 		bm := tx.Bucket([]byte(bucket_message))
 		bmm := tx.Bucket([]byte(bucket_mailbox_message)).Bucket([]byte(msg.MailboxId))
 		immuid := tx.Bucket([]byte(index_message_mailbox_uid))
+		imiu := tx.Bucket([]byte(index_message_id_uid))
 
 		// Delete message
 		err := bm.Delete([]byte(msg.Id))
@@ -71,6 +72,11 @@ func (repo *CentaureissiRepository) DeleteMessage(messageId string) error {
 		}
 		// Delete user ID and mbox name index
 		err = immuid.Delete([]byte(formatMailboxIdAndUid(msg.MailboxId, msg.Uid)))
+		if err != nil {
+			return err
+		}
+		// Delete message id and UID index
+		err = imiu.Delete([]byte(msg.Id))
 		if err != nil {
 			return err
 		}

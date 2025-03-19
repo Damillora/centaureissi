@@ -1,14 +1,21 @@
 package imapinterface
 
-import "github.com/Damillora/centaureissi/pkg/database/schema"
+import (
+	"github.com/Damillora/centaureissi/pkg/models"
+)
 
-func (c *CentaureissiImapSession) hydrateMessage(msg *schema.Message) *CentaureissiMessage {
-	blobs, err := c.services.GetMessageContent(msg.Hash)
+func (c *CentaureissiImapSession) hydrateMessage(msg *models.MessageUidListItem) *CentaureissiMessage {
+	message, err := c.services.GetMessageById(msg.Id)
+	if err != nil {
+		return nil
+	}
+
+	blobs, err := c.services.GetMessageContent(message.Hash)
 	if err != nil {
 		return nil
 	}
 	return &CentaureissiMessage{
-		Message: msg,
+		Message: message,
 		buf:     blobs,
 	}
 }

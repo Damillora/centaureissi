@@ -19,12 +19,44 @@ func (cs *CentaureissiService) CounterMessagesInMailboxByFlag(id string, flag st
 }
 
 func (cs *CentaureissiService) ListMessageByMailboxId(id string) ([]*schema.Message, error) {
-	msgs, err := cs.repository.ListMessagesByMailboxId(id)
+	msgs, err := cs.repository.ListMessageIdsByMailboxId(id)
+	messages := make([]*schema.Message, 0)
+	for _, msgId := range msgs {
+		msg, err := cs.repository.GetMessageById(msgId)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, msg)
+	}
 	if err != nil {
 		return nil, err
 	}
-	return msgs, err
+	return messages, err
 }
+
+func (cs *CentaureissiService) ListMessageUidsByMailboxId(id string) ([]*models.MessageUidListItem, error) {
+	msgs, err := cs.repository.ListMessageIdsByMailboxId(id)
+	messages := make([]*models.MessageUidListItem, 0)
+	for _, msgId := range msgs {
+		uid, err := cs.repository.GetMessageUidById(msgId)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, &models.MessageUidListItem{
+			Id:  msgId,
+			Uid: uid,
+		})
+	}
+	if err != nil {
+		return nil, err
+	}
+	return messages, err
+}
+
+func (cs *CentaureissiService) GetMessageById(id string) (*schema.Message, error) {
+	return cs.repository.GetMessageById(id)
+}
+
 func (cs *CentaureissiService) GetMessageContent(hash string) ([]byte, error) {
 	blob, err := cs.blobs.GetBlob(hash)
 	if err != nil {
@@ -32,7 +64,7 @@ func (cs *CentaureissiService) GetMessageContent(hash string) ([]byte, error) {
 	}
 	return blob, nil
 }
-func (cs *CentaureissiService) UploadMessage(mailboxId string, msg *models.MessageCreateModel) (*schema.Message, error) {
+func (cs *CentaureissiService) UploadMessage(mailboxId string, msg *models.MessageCreateModel) (*models.MessageUidListItem, error) {
 	uid, err := cs.IncrementMailboxUid(mailboxId)
 	msgData := &schema.Message{
 		Id:        uuid.NewString(),
@@ -50,7 +82,10 @@ func (cs *CentaureissiService) UploadMessage(mailboxId string, msg *models.Messa
 	if err != nil {
 		return nil, err
 	}
-	return msgData, nil
+	return &models.MessageUidListItem{
+		Id:  msgData.Id,
+		Uid: uid,
+	}, nil
 }
 func (cs *CentaureissiService) UploadMessageContent(content []byte) (string, error) {
 	sum := blake2b.Sum512(content)
