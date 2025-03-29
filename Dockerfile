@@ -2,19 +2,21 @@
 FROM node:20-alpine AS node_build
 WORKDIR /src
 COPY . .
-WORKDIR /src/pkg/web
+WORKDIR /src/crates/centaureissi_web/src/web
 RUN npm ci && npm run build
 
 # Go application
-FROM golang:1.24-alpine AS build
-WORKDIR /go/src/centaureissi
+FROM rust:alpine AS builder
+WORKDIR /src
+RUN apk add --no-cache musl-dev sqlite-dev
+ENV RUSTFLAGS=-Ctarget-feature=-crt-static
 COPY . .
-COPY --from=node_build /src/pkg/web/build/ /go/src/centaureissi/pkg/web/build/
-RUN go get -d -v ./...
-RUN CGO_ENABLED=0 GOOS=linux go build -o /centaureissi -ldflags '-extldflags "-static"' -tags timetzdata github.com/Damillora/centaureissi/cmd/centaureissi
+COPY --from=node_build /src/crates/centaureissi_web/src/web/build/ /src/crates/centaureissi_web/src/web/build/
+RUN cargo install --path crates/centaureissi_server
 
-FROM scratch AS runtime
+FROM alpine AS runtime
 WORKDIR /app
-COPY --from=build /centaureissi /app/
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-ENTRYPOINT ["/app/centaureissi"]
+RUN apk add --no-cache sqlite
+COPY --from=builder /usr/local/cargo/bin/centaureissi_server /app/centaureissi_server
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+ENTRYPOINT ["/app/centaureissi_server"]

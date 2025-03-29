@@ -1,3 +1,0 @@
-package imapinterface
-
-const mailboxDelim = '/'

@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = [ "crates/centaureissi_importer","crates/centaureissi_server" , "crates/centaureissi_web"]

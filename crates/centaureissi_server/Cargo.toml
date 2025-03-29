@@ -1,0 +1,19 @@
+[package]
+name = "centaureissi_server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+argon2 = { version = "0.5.3" }
+axum = { version = "0.8.3", features = ["macros"] }
+centaureissi_web = { version = "0.1.0", path = "../centaureissi_web" }
+chrono = {version = "0.4.40", features = ["serde"] }
+config = { version = "0.15.11", features = ["toml"]}
+diesel = { version = "2.2.0", features = ["sqlite","returning_clauses_for_sqlite_3_35","r2d2","chrono"] }
+diesel_migrations = "2.2.0"
+jsonwebtoken = "9.3.1"
+mime_guess = "2.0.5"
+rand_core = { version = "0.6", features = ["std"] }
+serde = "1.0.219"
+tokio = { version = "1.44.1", features = ["full"] }
+tracing = "0.1.41"
