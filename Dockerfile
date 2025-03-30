@@ -16,7 +16,7 @@ RUN cargo install --path crates/centaureissi_server
 
 FROM alpine AS runtime
 WORKDIR /app
-RUN apk add --no-cache sqlite-libs
+RUN apk add --no-cache sqlite-libs libgcc
 COPY --from=builder /usr/local/cargo/bin/centaureissi_server /app/centaureissi_server
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENTRYPOINT ["/app/centaureissi_server"]
