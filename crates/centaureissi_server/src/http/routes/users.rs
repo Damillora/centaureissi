@@ -5,7 +5,12 @@ use argon2::{
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
 use axum::{
-    extract::State, http::StatusCode, middleware, response::IntoResponse, routing::{get, post, put}, Extension, Json, Router
+    Extension, Json, Router,
+    extract::State,
+    http::StatusCode,
+    middleware,
+    response::IntoResponse,
+    routing::{get, post, put},
 };
 use diesel::{RunQueryDsl, SelectableHelper};
 
@@ -48,7 +53,7 @@ async fn register_user(
 ) -> Result<Json<UserProfileResponse>, CentaureissiError> {
     use crate::db::schema::users;
     if context.config.disable_registration {
-        return Err(CentaureissiError::RegistrationDisabled())
+        return Err(CentaureissiError::RegistrationDisabled());
     }
     let conn = &mut context.db.get().unwrap();
 
@@ -93,9 +98,9 @@ async fn user_update(
     let conn = &mut context.db.get().unwrap();
 
     let changeset = UpdateUser {
-       username: input.username,
+        username: input.username,
     };
-    
+
     diesel::update(&user)
         .set(changeset)
         .execute(conn)
@@ -126,7 +131,7 @@ async fn user_update_password(
     let changeset = UpdateUserPassword {
         password: hashed_password,
     };
-    
+
     diesel::update(&user)
         .set(changeset)
         .execute(conn)

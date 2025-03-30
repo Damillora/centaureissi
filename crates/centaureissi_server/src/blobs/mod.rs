@@ -11,13 +11,15 @@ pub fn initialize_blobs(data_dir: String) -> Persy {
     }
 
     let blob_db = Persy::open(blob_db_file, Config::new()).expect("Cannot open blob database");
-    let blob_table_exists = blob_db.exists_segment(BLOB_TABLE)
+    let blob_table_exists = blob_db
+        .exists_segment(BLOB_TABLE)
         .expect("Cannot check for existence");
 
     if !blob_table_exists {
         {
             let mut tx = blob_db.begin().unwrap();
-            tx.create_segment(BLOB_TABLE).expect("Cannot create blobs segment");
+            tx.create_segment(BLOB_TABLE)
+                .expect("Cannot create blobs segment");
             tx.create_index::<String, PersyId>(BLOB_INDEX, ValueMode::Replace)
                 .expect("Cannot create index");
             let prepared = tx.prepare().unwrap();

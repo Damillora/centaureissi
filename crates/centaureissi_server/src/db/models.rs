@@ -32,4 +32,3 @@ pub struct Messages {
     pub user_id: i32,
     pub content_hash: String,
 }
-

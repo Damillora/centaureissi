@@ -10,16 +10,15 @@ use axum::{
 };
 use blake2::{Blake2b512, Digest};
 use diesel::{RunQueryDsl, SelectableHelper};
-use mail_parser::{Group, MessageParser};
+use mail_parser::MessageParser;
 use persy::PersyId;
-use tantivy::{DateTime, TantivyDocument, doc};
+use tantivy::doc;
 
 use crate::{
     blobs::{BLOB_INDEX, BLOB_TABLE},
     db::{
         models::{Messages, User},
         requests::NewMessage,
-        schema,
     },
     http::{context::CentaureissiContext, errors::CentaureissiError, middlewares},
     search,
@@ -48,7 +47,6 @@ async fn index_message(
     use crate::db::schema::messages;
 
     while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap().to_string();
         let file_name = field.file_name().unwrap().to_string();
         let data = field
             .bytes()
@@ -191,7 +189,6 @@ async fn index_message(
             );
             search_adder.add_document(search_doc)?;
             search_adder.commit()?;
-
         } else {
             return Err(CentaureissiError::InvalidEmailContentsError(String::from(
                 "no message",

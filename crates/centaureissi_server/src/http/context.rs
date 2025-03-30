@@ -1,6 +1,9 @@
 use std::sync::RwLock;
 
-use diesel::{r2d2::{self, ConnectionManager}, SqliteConnection};
+use diesel::{
+    SqliteConnection,
+    r2d2::{self, ConnectionManager},
+};
 use tantivy::{Index, IndexReader, IndexWriter};
 
 use crate::config::CentaureissiConfig;

@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Serialize, Deserialize)]
 // Define a structure for holding claims data used in JWT tokens
 pub struct Claims {

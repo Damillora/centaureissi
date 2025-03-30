@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
-use axum::{extract::State, http::StatusCode, middleware, routing::post, Extension, Json, Router};
+use axum::{Extension, Json, Router, extract::State, http::StatusCode, middleware, routing::post};
 use chrono::{Duration, Utc};
 use diesel::{
     ExpressionMethods, RunQueryDsl, SelectableHelper,
@@ -22,12 +22,13 @@ use crate::{
 pub fn router(state: Arc<CentaureissiContext>) -> Router<Arc<CentaureissiContext>> {
     let unprotected_router = Router::new().route("/login", post(login));
 
-    let protected_router = Router::new()
-        .route("/token",  post(get_token))
-        .layer(middleware::from_fn_with_state(
-            state,
-            middlewares::authorization_middleware,
-        ));
+    let protected_router =
+        Router::new()
+            .route("/token", post(get_token))
+            .layer(middleware::from_fn_with_state(
+                state,
+                middlewares::authorization_middleware,
+            ));
 
     return unprotected_router.merge(protected_router);
 }
@@ -72,11 +73,15 @@ async fn login(
         &claims,
         &EncodingKey::from_secret(secret.as_ref()),
     )
-    .map_err(|_| CentaureissiError::AuthError(String::from("Failure to decode token"), StatusCode::FORBIDDEN))?;
+    .map_err(|_| {
+        CentaureissiError::AuthError(
+            String::from("Failure to decode token"),
+            StatusCode::FORBIDDEN,
+        )
+    })?;
 
     Ok(Json(LoginResponse { token: token }))
 }
-
 
 async fn get_token(
     State(context): State<Arc<CentaureissiContext>>,
@@ -101,8 +106,12 @@ async fn get_token(
         &claims,
         &EncodingKey::from_secret(secret.as_ref()),
     )
-    .map_err(|_| CentaureissiError::AuthError(String::from("Failure to decode token"), StatusCode::FORBIDDEN))?;
-
+    .map_err(|_| {
+        CentaureissiError::AuthError(
+            String::from("Failure to decode token"),
+            StatusCode::FORBIDDEN,
+        )
+    })?;
 
     Ok(Json(LoginResponse { token: token }))
 }

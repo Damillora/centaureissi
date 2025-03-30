@@ -1,11 +1,11 @@
 use std::fs;
 
 use tantivy::{
-    schema::{Schema, INDEXED, STORED, STRING, TEXT}, Index, TantivyError
+    Index, TantivyError,
+    schema::{INDEXED, STORED, STRING, Schema, TEXT},
 };
 
 pub fn get_schema() -> Schema {
-
     let mut schema_builder = Schema::builder();
 
     schema_builder.add_i64_field("id", INDEXED | STORED);
@@ -32,10 +32,12 @@ pub fn initialize_search(data_dir: String) -> Index {
     let schema = get_schema();
 
     // If index already exists, open the existing one
-    let index = Index::create_in_dir(&search_index, schema.clone()).or_else(|error| match error {
-        TantivyError::IndexAlreadyExists => Ok(Index::open_in_dir(&search_index)?),
-        _ => Err(error),
-    }).expect("Cannot create index!");
-    
+    let index = Index::create_in_dir(&search_index, schema.clone())
+        .or_else(|error| match error {
+            TantivyError::IndexAlreadyExists => Ok(Index::open_in_dir(&search_index)?),
+            _ => Err(error),
+        })
+        .expect("Cannot create index!");
+
     index
 }

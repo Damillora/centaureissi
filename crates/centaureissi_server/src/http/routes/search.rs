@@ -6,12 +6,11 @@ use axum::{
     middleware,
     routing::get,
 };
-use chrono::NaiveDateTime;
 use mail_parser::DateTime;
 use tantivy::{
-    Document, TantivyDocument,
+    TantivyDocument,
     collector::{Count, TopDocs},
-    query::{self, QueryParser},
+    query::QueryParser,
     schema::Value,
 };
 
@@ -118,13 +117,13 @@ async fn search_message(
                     .unwrap()
                     .to_string(),
                 date: DateTime::from_timestamp(
-                    doc
-                    .get_first(date)
-                    .unwrap()
-                    .as_datetime()
-                    .unwrap()
-                    .into_timestamp_secs()
-                ).to_rfc3339(),
+                    doc.get_first(date)
+                        .unwrap()
+                        .as_datetime()
+                        .unwrap()
+                        .into_timestamp_secs(),
+                )
+                .to_rfc3339(),
             }
         });
 

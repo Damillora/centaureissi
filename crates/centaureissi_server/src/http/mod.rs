@@ -1,4 +1,7 @@
-use std::{net::SocketAddr, sync::{Arc, RwLock}};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, RwLock},
+};
 
 use axum::{Router, extract::DefaultBodyLimit};
 use context::CentaureissiContext;
@@ -37,8 +40,14 @@ pub async fn serve(
     let app = Router::new()
         .nest("/api/user", routes::users::router(shared_context.clone()))
         .nest("/api/auth", routes::auth::router(shared_context.clone()))
-        .nest("/api/messages", routes::messages::router(shared_context.clone()))
-        .nest("/api/search", routes::search::router(shared_context.clone()))
+        .nest(
+            "/api/messages",
+            routes::messages::router(shared_context.clone()),
+        )
+        .nest(
+            "/api/search",
+            routes::search::router(shared_context.clone()),
+        )
         .merge(routes::web::router())
         // Replace the default of 2MB with 100MB
         .layer(DefaultBodyLimit::max(100_000_000))

@@ -1,8 +1,7 @@
 use serde::Serialize;
 
-
 #[derive(Serialize)]
-pub struct LoginResponse{
+pub struct LoginResponse {
     pub token: String,
 }
 
@@ -42,4 +41,3 @@ pub struct StatsResponse {
     pub blob_count: u64,
     pub search_doc_count: u64,
 }
-

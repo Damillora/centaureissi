@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct CentaureissiConfig {
     /// Data directory to store database and blobs
-    pub data_dir: String, 
+    pub data_dir: String,
     /// Auth secret used to sign JWTs
     pub auth_secret: String,
     /// Disable registration on the instance
