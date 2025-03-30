@@ -4,7 +4,7 @@ pub fn compress_payloads(config: CentaureissiConfig, blob_db: persy::Persy) {
     for (read_id, content) in blob_db.scan(BLOB_TABLE).unwrap() {
         let mut uncompressed = Vec::<u8>::new();
 
-        let is_compressed = zstd::stream::copy_decode(&*content, &mut uncompressed).is_err();
+        let is_compressed = !zstd::stream::copy_decode(&*content, &mut uncompressed).is_err();
 
         if !is_compressed {
             if config.verbose {
