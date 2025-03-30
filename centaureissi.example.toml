@@ -1,5 +1,5 @@
 
-data_dir = "/home/damillora/Documents/centaureissi"
+data_dir = "/data"
 auth_secret = "centaureissi"
 disable_registration = false
 verbose = true
