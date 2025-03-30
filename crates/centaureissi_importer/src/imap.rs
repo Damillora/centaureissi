@@ -6,6 +6,8 @@ pub async fn import_imap(
     verbose: bool,
     imap_server: String,
     imap_port: u16,
+    imap_username: String,
+    imap_password: String,
 ) -> Result<(), ImporterError> {
     todo!()
 }

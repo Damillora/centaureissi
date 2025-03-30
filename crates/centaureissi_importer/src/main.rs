@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use centaureissi_importer::{client::CentaureissiClient, imap::import_imap, maildir::import_maildir, mbox::import_mbox};
 use clap::{ArgGroup, Parser};
 
@@ -44,6 +42,13 @@ struct ImporterConfig {
     #[arg(long, group = "imap", default_value_t = 143)]
     imap_port: u16,
 
+    /// IMAP Username
+    #[arg(short('u'), long, group = "imap")]
+    imap_username: Option<String>,
+
+    #[arg(short('p'), long, group = "imap")]
+    imap_password: Option<String>
+
 }
 
 #[tokio::main]
@@ -71,7 +76,9 @@ async fn main() {
     } else if config.imap_server.is_some() {
         let imap_server = config.imap_server.unwrap();
         let imap_port = config.imap_port;
-        let result = import_imap(client, config.verbose, imap_server, imap_port).await;
+        let imap_username = config.imap_username.unwrap();
+        let imap_password = config.imap_password.unwrap();
+        let result = import_imap(client, config.verbose, imap_server, imap_port, imap_username, imap_password).await;
         match result {
             Ok(_) => (),
             Err(e) => println!("Error occured on import: {}", e.to_string())
