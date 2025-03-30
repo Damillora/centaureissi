@@ -83,7 +83,7 @@ async fn search_message(
 
     let total_hits = searcher.search(&query, &Count)?;
     let mut total_pages = total_hits / per_page;
-    if total_hits % per_page == 0 {
+    if total_hits % per_page != 0 {
         total_pages = total_pages + 1;
     }
 
