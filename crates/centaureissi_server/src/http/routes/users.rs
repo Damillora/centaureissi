@@ -47,7 +47,9 @@ async fn register_user(
     Json(input): Json<NewUserRequest>,
 ) -> Result<Json<UserProfileResponse>, CentaureissiError> {
     use crate::db::schema::users;
-
+    if context.config.disable_registration {
+        return Err(CentaureissiError::RegistrationDisabled())
+    }
     let conn = &mut context.db.get().unwrap();
 
     let salt = SaltString::generate(&mut OsRng);

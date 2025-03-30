@@ -20,6 +20,7 @@ pub enum CentaureissiError {
     InvalidDataError(MultipartError),
     InvalidEmailContentsError(String),
     RelationalDatabaseError(),
+    RegistrationDisabled(),
 }
 
 impl IntoResponse for CentaureissiError {
@@ -58,6 +59,10 @@ impl IntoResponse for CentaureissiError {
             Self::RelationalDatabaseError() => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Relational database error".to_string(),
+            ),
+            Self::RegistrationDisabled() => (
+                StatusCode::BAD_REQUEST,
+                "Registration is disabled".to_string(),
             ),
         };
 
