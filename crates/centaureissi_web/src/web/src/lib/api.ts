@@ -112,7 +112,7 @@ export async function search({ q, page, perPage }: {q: any, page: any, perPage?:
     if (!perPage) {
         perPage = 10;
     }
-    let endpoint = url + "/api/search?q="+ q +"&page=" + page + "&perPage=" + perPage;
+    let endpoint = url + "/api/search?q="+ q +"&page=" + page + "&per_page=" + perPage;
 
     const response = await axios({
         url: endpoint,
