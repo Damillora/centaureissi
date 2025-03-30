@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use maildirs::Maildirs;
+use tokio::fs;
 
 use crate::{
     client::{CentaureissiClient, MailEntry},
@@ -22,32 +23,37 @@ pub async fn import_maildir(
         let mut counter_size = 0;
         let mut counter = 0;
         let mut messages = Vec::<MailEntry>::new();
+        let mut paths = Vec::<String>::new();
 
         if let Ok(msgs) = mdir.maildir.read() {
             for msg in msgs {
                 let contents = msg.read()?;
                 let file_name = msg.file_name()?;
+                let path = msg.path().to_owned().clone();
                 counter_size += contents.len();
                 counter += 1;
                 messages.push(MailEntry {
                     file_name: String::from(file_name),
                     contents: contents,
                 });
+                paths.push(String::from(path.to_str().unwrap()));
                 if verbose {
                     println!("Uploading {}", file_name);
-                } 
+                }
                 if counter_size >= 10_000_000 || counter >= 100 {
                     println!("Uploading {} emails", counter);
-                    http_client
-                        .upload_message_batch(messages)
-                        .await?;
+                    http_client.upload_message_batch(messages).await?;
                     counter_size = 0;
                     counter = 0;
                     messages = Vec::<MailEntry>::new();
-                }
 
-                if delete_source {
-                    msg.remove()?;
+                    if delete_source {
+                        for path in paths {
+                            fs::remove_file(path).await?;
+                        }
+                    }
+
+                    paths = Vec::<String>::new();
                 }
             }
         }
