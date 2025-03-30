@@ -1,4 +1,4 @@
-use centaureissi_server::{blobs, config::CentaureissiConfig, http, search::initialize_search};
+use centaureissi_server::{blobs, config::CentaureissiConfig, db, http, search::initialize_search};
 use config::Config;
 use diesel::{
     prelude::*,
@@ -18,9 +18,7 @@ async fn main() {
         .try_deserialize::<CentaureissiConfig>()
         .unwrap();
 
-    // Generate database URL from data dir
-    let mut database_url = config.data_dir.clone();
-    database_url.push_str(&"/centaureissi.db");
+    let database_url = config.get_database_url();
 
     let connection_manager = ConnectionManager::<SqliteConnection>::new(&database_url);
     let pool = r2d2::Pool::builder()
@@ -32,7 +30,7 @@ async fn main() {
     conn.run_pending_migrations(MIGRATIONS).unwrap();
 
     // Search
-    let search = initialize_search(config.data_dir.clone());
+    let search = initialize_search(&config);
     let index_writer = search.writer(50_000_000).unwrap();
     let index_reader = search
         .reader_builder()
@@ -41,7 +39,7 @@ async fn main() {
         .unwrap();
 
     // Blob Storage
-    let blob_db = blobs::initialize_blobs(config.data_dir.clone());
+    let blob_db = blobs::initialize_blobs(&config);
 
     http::serve(config, pool, search, index_writer, index_reader, blob_db).await;
 }

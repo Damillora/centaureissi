@@ -2,9 +2,10 @@ use std::{error::Error, fs};
 
 use persy::{Config, Persy, PersyId, ValueMode};
 
-pub fn initialize_blobs(data_dir: String) -> Persy {
-    let mut blob_db_file = data_dir;
-    blob_db_file.push_str(&"/blobs.db");
+use crate::config::CentaureissiConfig;
+
+pub fn initialize_blobs(config: &CentaureissiConfig) -> Persy {
+    let blob_db_file = config.get_blob_db_path();
 
     if !fs::exists(&blob_db_file).unwrap() {
         Persy::create(&blob_db_file).expect("Cannot create blob database");

@@ -1,9 +1,11 @@
-use std::fs;
+use std::{fs, sync::Arc};
 
 use tantivy::{
     Index, TantivyError,
     schema::{INDEXED, STORED, STRING, Schema, TEXT},
 };
+
+use crate::config::CentaureissiConfig;
 
 pub fn get_schema() -> Schema {
     let mut schema_builder = Schema::builder();
@@ -21,9 +23,8 @@ pub fn get_schema() -> Schema {
     schema_builder.add_text_field("content", TEXT | STORED);
     return schema_builder.build();
 }
-pub fn initialize_search(data_dir: String) -> Index {
-    let mut search_index = data_dir;
-    search_index.push_str(&"/search");
+pub fn initialize_search(config: &CentaureissiConfig) -> Index {
+    let search_index = config.get_search_index_path();
 
     if !fs::exists(&search_index).unwrap() {
         fs::create_dir(&search_index).expect("Cannot create index folder!");

@@ -48,6 +48,10 @@ pub async fn serve(
             "/api/search",
             routes::search::router(shared_context.clone()),
         )
+        .nest(
+            "/api/stats",
+            routes::stats::router(shared_context.clone()),
+        )
         .merge(routes::web::router())
         // Replace the default of 2MB with 100MB
         .layer(DefaultBodyLimit::max(100_000_000))

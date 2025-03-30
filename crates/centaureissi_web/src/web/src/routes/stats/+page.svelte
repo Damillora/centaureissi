@@ -25,12 +25,11 @@
             <h1 class="title">centaureissi stats</h1>
             {#if statsInfo}
             <p><strong>Version:</strong> {statsInfo.version}</p>
-            <p><strong>Database Size:</strong> {formatBytes(statsInfo.dbSize)}</p>
-            <p><strong>Mailbox Count:</strong> {statsInfo.mailboxCount} mailboxes</p>
-            <p><strong>Message Count:</strong> {statsInfo.messageCount} messages</p>
-            <p><strong>Blob Database Size:</strong> {formatBytes(statsInfo.blobDbSize)}</p>
-            <p><strong>Blob Count:</strong> {statsInfo.blobCount} blobs</p>
-            <p><strong>Search Document Count:</strong> {statsInfo.searchDocCount} documents</p>
+            <p><strong>Database Size:</strong> {formatBytes(statsInfo.db_size)}</p>
+            <p><strong>Message Count:</strong> {statsInfo.message_count} messages</p>
+            <p><strong>Blob Database Size:</strong> {formatBytes(statsInfo.blob_db_size)}</p>
+            <p><strong>Blob Count:</strong> {statsInfo.blob_count} blobs</p>
+            <p><strong>Search Document Count:</strong> {statsInfo.search_doc_count} documents</p>
             {:else}
             <p><strong>an issue has occured with stats gathering!</strong></p>
             {/if}
