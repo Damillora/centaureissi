@@ -36,7 +36,7 @@ pub async fn import_maildir(
                 if verbose {
                     println!("Uploading {}", file_name);
                 } 
-                if counter_size >= 10_000_000 {
+                if counter_size >= 10_000_000 || counter >= 100 {
                     println!("Uploading {} emails", counter);
                     http_client
                         .upload_message_batch(messages)
