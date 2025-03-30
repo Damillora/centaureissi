@@ -1,4 +1,4 @@
-use std::{error::Error, fs};
+use std::fs;
 
 use persy::{Config, Persy, PersyId, ValueMode};
 

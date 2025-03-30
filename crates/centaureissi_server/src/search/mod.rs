@@ -1,4 +1,4 @@
-use std::{fs, sync::Arc};
+use std::fs;
 
 use tantivy::{
     Index, TantivyError,

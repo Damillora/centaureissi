@@ -1,4 +1,4 @@
-use centaureissi_server::{blobs, config::CentaureissiConfig, db, http, search::initialize_search};
+use centaureissi_server::{blobs, config::CentaureissiConfig, http, search::initialize_search};
 use config::Config;
 use diesel::{
     prelude::*,

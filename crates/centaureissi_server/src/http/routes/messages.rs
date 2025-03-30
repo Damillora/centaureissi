@@ -1,4 +1,4 @@
-use std::{str::from_utf8, sync::Arc};
+use std::sync::Arc;
 
 use axum::{
     Extension, Router,
@@ -70,7 +70,7 @@ async fn index_message(
         let mut blob_item = context
             .blob_db
             .get::<String, PersyId>(BLOB_INDEX, &content_hash.to_string())?;
-        if let Some(id) = blob_item.next() {
+        if let Some(_) = blob_item.next() {
             // Already in blob database, no need to add
             continue;
         }

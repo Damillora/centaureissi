@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    Extension, Json, Router,
+    Json, Router,
     extract::{Query, State},
     middleware,
     routing::get,
@@ -15,7 +15,6 @@ use tantivy::{
 };
 
 use crate::{
-    db::models::User,
     http::{
         context::CentaureissiContext,
         errors::CentaureissiError,
@@ -44,7 +43,6 @@ pub fn router(state: Arc<CentaureissiContext>) -> Router<Arc<CentaureissiContext
 
 async fn search_message(
     State(context): State<Arc<CentaureissiContext>>,
-    Extension(user): Extension<User>,
     Query(input): Query<SearchRequest>,
 ) -> Result<Json<SearchResponse>, CentaureissiError> {
     let searcher = context.search_reader.searcher();
