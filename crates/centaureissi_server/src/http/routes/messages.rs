@@ -121,9 +121,9 @@ async fn index_message(
                     .iter()
                     .map(|item| {
                         if let Some(name) = item.name() {
-                            format!("{} <{}>", name, item.address().unwrap())
+                            format!("{} <{}>", name, item.address().unwrap_or(""))
                         } else {
-                            format!("{}", item.address().unwrap())
+                            format!("{}", item.address().unwrap_or(""))
                         }
                     })
                     .collect(),
