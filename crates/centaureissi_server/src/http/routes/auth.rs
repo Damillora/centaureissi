@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
-use axum::{extract::State, middleware, routing::post, Extension, Json, Router};
+use axum::{extract::State, http::StatusCode, middleware, routing::post, Extension, Json, Router};
 use chrono::{Duration, Utc};
 use diesel::{
     ExpressionMethods, RunQueryDsl, SelectableHelper,
@@ -17,13 +19,13 @@ use crate::{
     },
 };
 
-pub fn router(state: CentaureissiContext) -> Router<CentaureissiContext> {
+pub fn router(state: Arc<CentaureissiContext>) -> Router<Arc<CentaureissiContext>> {
     let unprotected_router = Router::new().route("/login", post(login));
 
     let protected_router = Router::new()
         .route("/token",  post(get_token))
         .layer(middleware::from_fn_with_state(
-            state.clone(),
+            state,
             middlewares::authorization_middleware,
         ));
 
@@ -31,7 +33,7 @@ pub fn router(state: CentaureissiContext) -> Router<CentaureissiContext> {
 }
 
 async fn login(
-    State(context): State<CentaureissiContext>,
+    State(context): State<Arc<CentaureissiContext>>,
     Json(input): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, CentaureissiError> {
     use crate::db::schema::users::dsl::*;
@@ -70,14 +72,14 @@ async fn login(
         &claims,
         &EncodingKey::from_secret(secret.as_ref()),
     )
-    .map_err(|_| CentaureissiError::InternalServerError())?;
+    .map_err(|_| CentaureissiError::AuthError(String::from("Failure to decode token"), StatusCode::FORBIDDEN))?;
 
     Ok(Json(LoginResponse { token: token }))
 }
 
 
 async fn get_token(
-    State(context): State<CentaureissiContext>,
+    State(context): State<Arc<CentaureissiContext>>,
     Extension(user): Extension<User>,
 ) -> Result<Json<LoginResponse>, CentaureissiError> {
     let secret = context.config.auth_secret.clone();
@@ -99,7 +101,8 @@ async fn get_token(
         &claims,
         &EncodingKey::from_secret(secret.as_ref()),
     )
-    .map_err(|_| CentaureissiError::InternalServerError())?;
+    .map_err(|_| CentaureissiError::AuthError(String::from("Failure to decode token"), StatusCode::FORBIDDEN))?;
+
 
     Ok(Json(LoginResponse { token: token }))
 }

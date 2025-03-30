@@ -109,6 +109,9 @@ export async function updateUserPassword({ old_password, new_password }) {
 
 
 export async function search({ q, page, perPage }: {q: any, page: any, perPage?: any}) {
+    if (!perPage) {
+        perPage = 10;
+    }
     let endpoint = url + "/api/search?q="+ q +"&page=" + page + "&perPage=" + perPage;
 
     const response = await axios({

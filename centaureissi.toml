@@ -2,3 +2,4 @@
 data_dir = "/home/damillora/Documents/centaureissi"
 auth_secret = "centaureissi"
 disable_registration = false
+verbose = true

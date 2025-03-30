@@ -9,4 +9,6 @@ pub struct CentaureissiConfig {
     pub auth_secret: String,
     /// Disable registration on the instance
     pub disable_registration: bool,
+    /// Be verbose on logging
+    pub verbose: bool,
 }

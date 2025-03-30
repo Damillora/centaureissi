@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     Router,
     http::{StatusCode, Uri, header},
@@ -8,7 +10,7 @@ use axum::{
 use crate::http::context::CentaureissiContext;
 use centaureissi_web::WebEmbed;
 
-pub fn router() -> Router<CentaureissiContext> {
+pub fn router() -> Router<Arc<CentaureissiContext>> {
     return Router::new()
         .route("/", get(index_handler))
         .route("/index.html", get(index_handler))
@@ -22,11 +24,11 @@ async fn index_handler() -> impl IntoResponse {
     static_handler("/app.html".parse::<Uri>().unwrap()).await
 }
 
-// We use a wildcard matcher ("/dist/*file") to match against everything
+// We use a wildcard matcher ("/_app/*file") to match against everything
 // within our defined assets directory. This is the directory on our Asset
 // struct below, where folder = "examples/public/".
 async fn static_handler(uri: Uri) -> impl IntoResponse {
-    let mut path = uri.path().trim_start_matches('/').to_string();
+    let path = uri.path().trim_start_matches('/').to_string();
 
     match WebEmbed::get(path.as_str()) {
         Some(content) => {

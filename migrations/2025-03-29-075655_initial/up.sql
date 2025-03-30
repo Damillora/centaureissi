@@ -34,4 +34,6 @@ CREATE TABLE messages (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
+CREATE INDEX messages_content_hash ON messages (content_hash);
+
 SELECT diesel_manage_updated_at('messages');

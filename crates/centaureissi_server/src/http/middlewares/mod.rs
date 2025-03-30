@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     body::Body,
     extract::{Request, State},
@@ -13,7 +15,7 @@ use crate::db::models::User;
 use super::{context::CentaureissiContext, errors::CentaureissiError, models::auth::Claims};
 
 pub async fn authorization_middleware(
-    State(context): State<CentaureissiContext>,
+    State(context): State<Arc<CentaureissiContext>>,
     mut req: Request,
     next: Next,
 ) -> Result<Response<Body>, CentaureissiError> {

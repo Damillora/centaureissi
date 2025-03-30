@@ -25,8 +25,8 @@
         const data = await search({ q: query, page: page });
         if (data.items) {
             messages = data.items;
-            totalPages = data.totalPages;
-            messageCount = data.count;
+            totalPages = data.total_pages;
+            messageCount = data.total_items;
             pagination = paginate(page, totalPages);
         }
 

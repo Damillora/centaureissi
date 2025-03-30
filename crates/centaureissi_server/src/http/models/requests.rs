@@ -22,3 +22,10 @@ pub struct UserUpdatePasswordRequest {
     pub old_password: String,
     pub new_password: String,
 }
+
+#[derive(Deserialize)]
+pub struct SearchRequest {
+    pub q: String,
+    pub page: Option<usize>,
+    pub per_page: Option<usize>,
+}
