@@ -1,3 +1,5 @@
+/// Actions
+pub mod actions;
 /// Blob storage
 pub mod blobs;
 /// Configuration of Centaureissi

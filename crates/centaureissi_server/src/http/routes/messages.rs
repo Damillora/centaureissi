@@ -75,6 +75,11 @@ async fn index_message(
             continue;
         }
 
+        // ZSTD compression
+        let mut compressed_data = Vec::<u8>::new();
+        zstd::stream::copy_encode(&*data, &mut compressed_data, 0)
+            .map_err(|_| CentaureissiError::BlobDatabaseError())?;
+
         // Insert into database
         let new_message = NewMessage {
             user_id: user.id,
@@ -89,7 +94,7 @@ async fn index_message(
 
         // Insert email to blob transaction
         let mut blob_write_txn = context.blob_db.begin()?;
-        let id = blob_write_txn.insert(BLOB_TABLE, &data)?;
+        let id = blob_write_txn.insert(BLOB_TABLE, &compressed_data)?;
         blob_write_txn.put::<String, PersyId>(BLOB_INDEX, content_hash.clone(), id)?;
         let prepared = blob_write_txn.prepare()?;
         prepared.commit()?;

@@ -384,6 +384,7 @@ dependencies = [
  "blake2",
  "centaureissi_web",
  "chrono",
+ "clap",
  "config",
  "diesel",
  "diesel_migrations",
@@ -396,6 +397,7 @@ dependencies = [
  "tantivy",
  "tokio",
  "tracing",
+ "zstd",
 ]
 
 [[package]]

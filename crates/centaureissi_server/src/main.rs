@@ -1,4 +1,5 @@
-use centaureissi_server::{blobs, config::CentaureissiConfig, http, search::initialize_search};
+use centaureissi_server::{actions, blobs, config::CentaureissiConfig, http, search::initialize_search};
+use clap::{Parser, Subcommand};
 use config::Config;
 use diesel::{
     prelude::*,
@@ -8,8 +9,22 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use tantivy::ReloadPolicy;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations");
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Serve,
+    Compress,
+}
 #[tokio::main]
 async fn main() {
+    let cli = Cli::parse();
+
     let config = Config::builder()
         .add_source(config::File::with_name("centaureissi"))
         .add_source(config::Environment::with_prefix("CENTAUREISSI"))
@@ -41,5 +56,9 @@ async fn main() {
     // Blob Storage
     let blob_db = blobs::initialize_blobs(&config);
 
-    http::serve(config, pool, search, index_writer, index_reader, blob_db).await;
+    match &cli.command {
+        Some(Commands::Compress) => actions::compress::compress_payloads(config, blob_db),
+        Some(Commands::Serve) => http::serve(config, pool, search, index_writer, index_reader, blob_db).await,
+        None => http::serve(config, pool, search, index_writer, index_reader, blob_db).await,
+    }
 }
