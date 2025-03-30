@@ -35,7 +35,7 @@
 
     afterNavigate(() => {
         loading = true;
-        query = url.searchParams.get("q");
+        query = url.searchParams.get("q") ?? "";
         messages = [];
         page = 1;
         getData();
