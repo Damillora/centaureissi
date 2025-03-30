@@ -72,7 +72,7 @@ async fn index_message(
             .get::<String, PersyId>(BLOB_INDEX, &content_hash.to_string())?;
         if let Some(id) = blob_item.next() {
             // Already in blob database, no need to add
-            return Ok((StatusCode::OK, "Duplicate content detected, not adding"));
+            continue;
         }
 
         // Insert into database
