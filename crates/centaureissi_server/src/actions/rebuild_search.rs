@@ -57,7 +57,9 @@ pub fn rebuild_search_index(
                 search_writer.add_document(search_doc).unwrap();
                 search_writer.commit().unwrap();
 
-                println!("Reindexed message: {}", &message_item.content_hash);
+                if config.verbose {
+                    println!("Reindexed message: {}", &message_item.content_hash);
+                }
             } else {
                 panic!("Cannot parse message: {}", &message_item.content_hash);
             }
