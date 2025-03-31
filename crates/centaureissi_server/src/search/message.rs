@@ -1,7 +1,7 @@
 use mail_parser::Message;
 use tantivy::{doc, TantivyDocument};
 
-pub fn create_search_document_from_message(message_id: i32, message_user_id: i32, content_hash: String, msg: Message) -> TantivyDocument {
+pub fn create_search_document_from_message(message_user_id: i32, content_hash: String, msg: Message) -> TantivyDocument {
     let from_data: Vec<String> = match msg.from() {
         Some(from) => from
             .iter()

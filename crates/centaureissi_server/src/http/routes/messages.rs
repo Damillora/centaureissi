@@ -85,7 +85,7 @@ async fn index_message(
             content_hash: content_hash.clone(),
         };
 
-        let message = diesel::insert_into(messages::table)
+        diesel::insert_into(messages::table)
             .values(&new_message)
             .returning(Messages::as_returning())
             .get_result(conn)
@@ -102,7 +102,7 @@ async fn index_message(
         let data_vec = data.to_vec();
         let parsed_msg = MessageParser::default().parse(&data_vec);
         if let Some(msg) = parsed_msg {
-            let search_doc = search::message::create_search_document_from_message(message.id, user.id, content_hash, msg);
+            let search_doc = search::message::create_search_document_from_message(user.id, content_hash, msg);
             
             let mut search_adder = context.search_writer.write().unwrap();
             search_adder.add_document(search_doc)?;

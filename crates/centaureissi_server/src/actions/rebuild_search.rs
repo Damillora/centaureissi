@@ -1,5 +1,3 @@
-use std::fs;
-
 use diesel::{
     QueryDsl, RunQueryDsl, SelectableHelper, SqliteConnection,
     r2d2::{ConnectionManager, Pool},
@@ -48,7 +46,6 @@ pub fn rebuild_search_index(
             let parsed_msg = MessageParser::default().parse(&uncompressed);
             if let Some(msg) = parsed_msg {
                 let search_doc = search::message::create_search_document_from_message(
-                    message_item.id,
                     message_item.id,
                     message_item.content_hash.clone(),
                     msg,
