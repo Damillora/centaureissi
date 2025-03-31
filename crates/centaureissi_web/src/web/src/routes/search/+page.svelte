@@ -84,7 +84,7 @@
             <div class="block">
                 <div class="column is-full">
                     <div class="block">
-                        {#each messages as message, i (message.id)}
+                        {#each messages as message, i (message.hash)}
                             <MailItem {message} />
                         {/each}
                     </div>
