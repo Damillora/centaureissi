@@ -50,7 +50,6 @@ async fn search_message(
     let schema = search::get_schema();
 
     // Schema Fields
-    let id = schema.get_field("id").unwrap();
     let hash = schema.get_field("hash").unwrap();
     let user_id = schema.get_field("user_id").unwrap();
     let from = schema.get_field("from").unwrap();
@@ -100,7 +99,6 @@ async fn search_message(
             // }
 
             SearchResponseItem {
-                id: doc.get_first(id).unwrap().as_i64().unwrap(),
                 hash: doc.get_first(hash).unwrap().as_str().unwrap().to_string(),
                 user_id: doc.get_first(user_id).unwrap().as_i64().unwrap(),
 

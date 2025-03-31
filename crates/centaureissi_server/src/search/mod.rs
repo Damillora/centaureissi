@@ -12,7 +12,6 @@ pub mod message;
 pub fn get_schema() -> Schema {
     let mut schema_builder = Schema::builder();
 
-    schema_builder.add_i64_field("id", INDEXED | STORED);
     schema_builder.add_text_field("hash", STRING | STORED);
     schema_builder.add_i64_field("user_id", INDEXED | STORED);
 

@@ -67,7 +67,6 @@ pub fn create_search_document_from_message(message_id: i32, message_user_id: i32
     let schema = crate::search::get_schema();
 
     // Schema Fields
-    let id = schema.get_field("id").unwrap();
     let hash = schema.get_field("hash").unwrap();
     let user_id = schema.get_field("user_id").unwrap();
     let from = schema.get_field("from").unwrap();
@@ -80,7 +79,6 @@ pub fn create_search_document_from_message(message_id: i32, message_user_id: i32
 
     
     return doc!(
-        id => i64::from(message_id),
         hash => content_hash,
         user_id => i64::from(message_user_id),
         from => from_data.join(", "),

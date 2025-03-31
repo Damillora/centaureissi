@@ -20,7 +20,6 @@ pub struct SearchResponse {
 
 #[derive(Serialize)]
 pub struct SearchResponseItem {
-    pub id: i64,
     pub hash: String,
     pub user_id: i64,
 
