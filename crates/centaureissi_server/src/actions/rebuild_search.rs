@@ -27,6 +27,9 @@ pub fn rebuild_search_index(
             .select(Messages::as_select())
             .get_results(conn)
             .unwrap();
+
+        let mut counter: usize = 1;
+
         for message_item in all_messages {
             let blob_id = blob_db
                 .one::<String, PersyId>(BLOB_INDEX, &message_item.content_hash)
@@ -60,6 +63,11 @@ pub fn rebuild_search_index(
             } else {
                 panic!("Cannot parse message: {}", &message_item.content_hash);
             }
+
+            if counter % 100 == 0 && !config.verbose {
+                println!("Indexed message #{}", counter)
+            }
+            counter = counter + 1;
         }
     }
 }
