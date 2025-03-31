@@ -12,7 +12,6 @@ use blake2::{Blake2b512, Digest};
 use diesel::{RunQueryDsl, SelectableHelper};
 use mail_parser::MessageParser;
 use persy::PersyId;
-use tantivy::doc;
 
 use crate::{
     blobs::{BLOB_INDEX, BLOB_TABLE},
@@ -103,95 +102,9 @@ async fn index_message(
         let data_vec = data.to_vec();
         let parsed_msg = MessageParser::default().parse(&data_vec);
         if let Some(msg) = parsed_msg {
-            let from_data: Vec<String> = match msg.from() {
-                Some(from) => from
-                    .iter()
-                    .map(|item| {
-                        if let Some(name) = item.name() {
-                            format!("{} <{}>", name, item.address().unwrap())
-                        } else {
-                            format!("{}", item.address().unwrap())
-                        }
-                    })
-                    .collect(),
-                None => Vec::new(),
-            };
-            let to_data: Vec<String> = match msg.to() {
-                Some(to) => to
-                    .iter()
-                    .map(|item| {
-                        if let Some(name) = item.name() {
-                            format!("{} <{}>", name, item.address().unwrap_or(""))
-                        } else {
-                            format!("{}", item.address().unwrap_or(""))
-                        }
-                    })
-                    .collect(),
-                None => Vec::new(),
-            };
-            let cc_data: Vec<String> = match msg.cc() {
-                Some(cc) => cc
-                    .iter()
-                    .map(|item| {
-                        if let Some(name) = item.name() {
-                            format!("{} <{}>", name, item.address().unwrap())
-                        } else {
-                            format!("{}", item.address().unwrap())
-                        }
-                    })
-                    .collect(),
-                None => Vec::new(),
-            };
-            let bcc_data: Vec<String> = match msg.bcc() {
-                Some(bcc) => bcc
-                    .iter()
-                    .map(|item| {
-                        if let Some(name) = item.name() {
-                            format!("{} <{}>", name, item.address().unwrap())
-                        } else {
-                            format!("{}", item.address().unwrap())
-                        }
-                    })
-                    .collect(),
-                None => Vec::new(),
-            };
-            let subject_data = msg.subject().unwrap_or("");
-            let date_data = msg
-                .date()
-                .unwrap_or(&mail_parser::DateTime::from_timestamp(0))
-                .to_timestamp();
-            let mail_contents_data: Vec<String> = msg
-                .text_bodies()
-                .map(|item| item.text_contents().unwrap_or("").to_string())
-                .collect();
-
-            let schema = search::get_schema();
-
-            // Schema Fields
-            let id = schema.get_field("id").unwrap();
-            let hash = schema.get_field("hash").unwrap();
-            let user_id = schema.get_field("user_id").unwrap();
-            let from = schema.get_field("from").unwrap();
-            let to = schema.get_field("to").unwrap();
-            let cc = schema.get_field("cc").unwrap();
-            let bcc = schema.get_field("bcc").unwrap();
-            let subject = schema.get_field("subject").unwrap();
-            let date = schema.get_field("date").unwrap();
-            let content = schema.get_field("content").unwrap();
-
+            let search_doc = search::message::create_search_document_from_message(message.id, user.id, content_hash, msg);
+            
             let mut search_adder = context.search_writer.write().unwrap();
-            let search_doc = doc!(
-                id => i64::from(message.id),
-                hash => content_hash,
-                user_id => i64::from(user.id),
-                from => from_data.join(", "),
-                to => to_data.join(", "),
-                cc => cc_data.join(", "),
-                bcc => bcc_data.join(", "),
-                subject => subject_data,
-                date => tantivy::DateTime::from_timestamp_secs(date_data),
-                content => mail_contents_data.join("\n\n"),
-            );
             search_adder.add_document(search_doc)?;
             search_adder.commit()?;
         } else {

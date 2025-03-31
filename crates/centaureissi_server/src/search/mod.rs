@@ -7,6 +7,8 @@ use tantivy::{
 
 use crate::config::CentaureissiConfig;
 
+pub mod message;
+
 pub fn get_schema() -> Schema {
     let mut schema_builder = Schema::builder();
 
