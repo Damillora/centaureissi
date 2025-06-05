@@ -9,7 +9,7 @@ use crate::{
     blobs::{BLOB_INDEX, BLOB_TABLE},
     config::CentaureissiConfig,
     db::models::Messages,
-    search,
+    search::{self, initialize_search},
 };
 
 pub fn rebuild_search_index(
@@ -18,6 +18,8 @@ pub fn rebuild_search_index(
     rdb: Pool<ConnectionManager<SqliteConnection>>,
     search_writer: &mut tantivy::IndexWriter,
 ) {
+    let search = initialize_search(&config);
+
     let conn = &mut rdb.get().unwrap();
 
     {
