@@ -1,14 +1,15 @@
 use std::sync::Arc;
 
 use axum::{
-    Extension, Router,
-    extract::{Multipart, State},
+    Extension, Json, Router,
+    extract::{Multipart, Path, State},
     http::StatusCode,
     middleware,
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
 };
 use blake2::{Blake2b512, Digest};
+use chrono::DateTime;
 use diesel::{RunQueryDsl, SelectableHelper};
 use mail_parser::MessageParser;
 use persy::PersyId;
@@ -19,20 +20,28 @@ use crate::{
         models::{Messages, User},
         requests::NewMessage,
     },
-    http::{context::CentaureissiContext, errors::CentaureissiError, middlewares},
-    search,
+    http::{
+        context::CentaureissiContext,
+        errors::CentaureissiError,
+        middlewares,
+        models::responses::{MessageContentResponse, MessageResponse},
+    },
+    search, utils,
 };
 
 pub fn router(state: Arc<CentaureissiContext>) -> Router<Arc<CentaureissiContext>> {
     let unprotected_router = Router::new();
 
-    let protected_router =
-        Router::new()
-            .route("/add", post(index_message))
-            .layer(middleware::from_fn_with_state(
-                state,
-                middlewares::authorization_middleware,
-            ));
+    let protected_router = Router::new()
+        .route("/add", post(index_message))
+        .route("/{message_hash}/info", get(read_message_info))
+        .route("/{message_hash}/raw", get(read_message_raw))
+        .route("/{message_hash}/text", get(read_message_text))
+        .route("/{message_hash}/html", get(read_message_html))
+        .layer(middleware::from_fn_with_state(
+            state,
+            middlewares::authorization_middleware,
+        ));
 
     return unprotected_router.merge(protected_router);
 }
@@ -102,8 +111,9 @@ async fn index_message(
         let data_vec = data.to_vec();
         let parsed_msg = MessageParser::default().parse(&data_vec);
         if let Some(msg) = parsed_msg {
-            let search_doc = search::message::create_search_document_from_message(user.id, content_hash, msg);
-            
+            let search_doc =
+                search::message::create_search_document_from_message(user.id, content_hash, msg);
+
             let mut search_adder = context.search_writer.write().unwrap();
             search_adder.add_document(search_doc)?;
             search_adder.commit()?;
@@ -115,4 +125,182 @@ async fn index_message(
     }
 
     Ok((StatusCode::OK, ""))
+}
+
+async fn read_message_info(
+    State(context): State<Arc<CentaureissiContext>>,
+    Extension(user): Extension<User>,
+    Path(message_hash): Path<String>,
+) -> Result<impl IntoResponse, CentaureissiError> {
+    println!("{}", message_hash);
+
+    let blob_id = context
+        .blob_db
+        .one::<String, PersyId>(BLOB_INDEX, &message_hash)
+        .unwrap();
+
+    if let Some(blob_id) = blob_id {
+        let blob_contents = context.blob_db.read(BLOB_TABLE, &blob_id).unwrap();
+
+        if let Some(contents) = blob_contents {
+            let mut uncompressed = Vec::<u8>::new();
+
+            let is_compressed = !zstd::stream::copy_decode(&*contents, &mut uncompressed).is_err();
+
+            if !is_compressed {
+                uncompressed = contents;
+            }
+
+            let parsed_msg = MessageParser::default().parse(&uncompressed);
+
+            if let Some(msg) = parsed_msg {
+                let message_doc = utils::message::create_message_model_from_message(user.id, msg);
+
+                let date = DateTime::from_timestamp(message_doc.timestamp_secs, 0).unwrap();
+
+                return Ok(Json(MessageResponse {
+                    hash: message_hash,
+
+                    date: date.to_rfc3339().to_string(),
+                    from: message_doc.from,
+                    to: message_doc.to,
+                    cc: message_doc.cc,
+                    bcc: message_doc.bcc,
+
+                    is_html_mail: message_doc.is_html_mail,
+                    is_text_mail: message_doc.is_text_mail,
+                    subject: message_doc.subject,
+                }));
+            } else {
+                return Err(CentaureissiError::MessageError());
+            }
+        } else {
+            return Err(CentaureissiError::MessageNotFound());
+        }
+    } else {
+        return Err(CentaureissiError::MessageNotFound());
+    }
+}
+
+async fn read_message_raw(
+    State(context): State<Arc<CentaureissiContext>>,
+    Extension(user): Extension<User>,
+    Path(message_hash): Path<String>,
+) -> Result<impl IntoResponse, CentaureissiError> {
+    println!("{}", message_hash);
+
+    let blob_id = context
+        .blob_db
+        .one::<String, PersyId>(BLOB_INDEX, &message_hash)
+        .unwrap();
+
+    if let Some(blob_id) = blob_id {
+        let blob_contents = context.blob_db.read(BLOB_TABLE, &blob_id).unwrap();
+
+        if let Some(contents) = blob_contents {
+            let mut uncompressed = Vec::<u8>::new();
+
+            let is_compressed = !zstd::stream::copy_decode(&*contents, &mut uncompressed).is_err();
+
+            if !is_compressed {
+                uncompressed = contents;
+            }
+
+            return Ok(Json(MessageContentResponse {
+                content: String::from_utf8(uncompressed).unwrap(),
+            }));
+        } else {
+            return Err(CentaureissiError::MessageNotFound());
+        }
+    } else {
+        return Err(CentaureissiError::MessageNotFound());
+    }
+}
+
+async fn read_message_html(
+    State(context): State<Arc<CentaureissiContext>>,
+    Extension(user): Extension<User>,
+    Path(message_hash): Path<String>,
+) -> Result<impl IntoResponse, CentaureissiError> {
+    println!("{}", message_hash);
+
+    let blob_id = context
+        .blob_db
+        .one::<String, PersyId>(BLOB_INDEX, &message_hash)
+        .unwrap();
+
+    if let Some(blob_id) = blob_id {
+        let blob_contents = context.blob_db.read(BLOB_TABLE, &blob_id).unwrap();
+
+        if let Some(contents) = blob_contents {
+            let mut uncompressed = Vec::<u8>::new();
+
+            let is_compressed = !zstd::stream::copy_decode(&*contents, &mut uncompressed).is_err();
+
+            if !is_compressed {
+                uncompressed = contents;
+            }
+
+            let parsed_msg = MessageParser::default().parse(&uncompressed);
+
+            if let Some(msg) = parsed_msg {
+                let message_doc =
+                    utils::message::create_message_content_model_from_message(true, msg);
+
+                return Ok(Json(MessageContentResponse {
+                    content: message_doc.content,
+                }));
+            } else {
+                return Err(CentaureissiError::MessageError());
+            }
+        } else {
+            return Err(CentaureissiError::MessageNotFound());
+        }
+    } else {
+        return Err(CentaureissiError::MessageNotFound());
+    }
+}
+
+async fn read_message_text(
+    State(context): State<Arc<CentaureissiContext>>,
+    Extension(user): Extension<User>,
+    Path(message_hash): Path<String>,
+) -> Result<impl IntoResponse, CentaureissiError> {
+    println!("{}", message_hash);
+
+    let blob_id = context
+        .blob_db
+        .one::<String, PersyId>(BLOB_INDEX, &message_hash)
+        .unwrap();
+
+    if let Some(blob_id) = blob_id {
+        let blob_contents = context.blob_db.read(BLOB_TABLE, &blob_id).unwrap();
+
+        if let Some(contents) = blob_contents {
+            let mut uncompressed = Vec::<u8>::new();
+
+            let is_compressed = !zstd::stream::copy_decode(&*contents, &mut uncompressed).is_err();
+
+            if !is_compressed {
+                uncompressed = contents;
+            }
+
+            let parsed_msg = MessageParser::default().parse(&uncompressed);
+
+            if let Some(msg) = parsed_msg {
+                let message_doc =
+                    utils::message::create_message_content_model_from_message(false, msg);
+
+                return Ok(Json(MessageContentResponse {
+                    content: message_doc.content,
+                }));
+            } else {
+                return Err(CentaureissiError::MessageError());
+            }
+        } else {
+            return Err(CentaureissiError::MessageNotFound());
+        }
+    } else {
+        return Err(CentaureissiError::MessageNotFound());
+    }
 }

@@ -10,3 +10,5 @@ pub mod db;
 pub mod http;
 /// Search indexer
 pub mod search;
+/// Utils
+pub mod utils;

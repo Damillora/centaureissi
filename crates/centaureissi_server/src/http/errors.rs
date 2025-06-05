@@ -1,4 +1,3 @@
-
 use axum::{
     Json,
     extract::multipart::MultipartError,
@@ -21,6 +20,8 @@ pub enum CentaureissiError {
     RelationalDatabaseError(),
     BlobDatabaseError(),
     RegistrationDisabled(),
+    MessageNotFound(),
+    MessageError(),
 }
 
 impl IntoResponse for CentaureissiError {
@@ -68,6 +69,8 @@ impl IntoResponse for CentaureissiError {
                 StatusCode::BAD_REQUEST,
                 "Registration is disabled".to_string(),
             ),
+            Self::MessageNotFound() => (StatusCode::NOT_FOUND, "Message not found".to_string()),
+            Self::MessageError() => (StatusCode::BAD_REQUEST, "Message is unreadable".to_string()),
         };
 
         (status, Json(ErrorResponse { message })).into_response()

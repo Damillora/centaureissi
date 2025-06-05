@@ -40,3 +40,23 @@ pub struct StatsResponse {
     pub blob_count: u64,
     pub search_doc_count: u64,
 }
+
+#[derive(Serialize)]
+pub struct MessageResponse {
+    pub hash: String,
+    pub date: String,
+
+    pub from: String,
+    pub to: String,
+    pub cc: String,
+    pub bcc: String,
+
+    pub is_html_mail: bool,
+    pub is_text_mail: bool,
+    pub subject: String,
+}
+
+#[derive(Serialize)]
+pub struct MessageContentResponse {
+    pub content: String,
+}
