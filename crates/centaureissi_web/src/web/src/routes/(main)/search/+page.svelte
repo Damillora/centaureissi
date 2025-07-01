@@ -18,11 +18,11 @@
     let loading = $state(false);
 
     const getData = async () => {
+        let searchTerm = query;
         if (query == "") {
-            loading = false;
-            return;
+            searchTerm = "*";
         }
-        const data = await search({ q: query, page: page });
+        const data = await search({ q: searchTerm, page: page });
         if (data.items) {
             messages = data.items;
             totalPages = data.total_pages;
