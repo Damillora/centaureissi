@@ -197,6 +197,19 @@ export async function tokenSign(path: string) {
   return response.data.token;
 }
 
+export async function getToken() {
+  const endpoint = url + "/api/auth/token";
+  const response = await axios({
+    url: endpoint,
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + current_token,
+      "Content-Type": "application/json",
+    },
+    data: JSON.stringify({}),
+  });
+  return response.data.token;
+}
 export async function downloadAttachment(
   message_id: string,
   id: number,
