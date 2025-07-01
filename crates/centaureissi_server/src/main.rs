@@ -1,7 +1,8 @@
-use std::fs;
+use std::{fs, time::Duration};
 
 use centaureissi_server::{
-    actions, blobs, config::CentaureissiConfig, http, search::initialize_search,
+    actions, blobs, config::CentaureissiConfig, db::connection::ConnectionOptions, http,
+    search::initialize_search,
 };
 use clap::{Parser, Subcommand};
 use config::Config;
@@ -47,6 +48,11 @@ async fn main() {
 
     let connection_manager = ConnectionManager::<SqliteConnection>::new(&database_url);
     let pool = r2d2::Pool::builder()
+        .max_size(16)
+        .connection_customizer(Box::new(ConnectionOptions {
+            enable_wal: true,
+            busy_timeout: Some(Duration::from_secs(30)),
+        }))
         .build(connection_manager)
         .expect("Failed to create connection pool");
 
@@ -80,8 +86,9 @@ async fn main() {
         Some(Commands::Serve) => {
             http::serve(config, pool, search, index_writer, index_reader, blob_db).await
         }
-        Some(Commands::RebuildSearchIndex) => 
-            actions::rebuild_search::rebuild_search_index(config, blob_db, pool, &mut index_writer),
+        Some(Commands::RebuildSearchIndex) => {
+            actions::rebuild_search::rebuild_search_index(config, blob_db, pool, &mut index_writer)
+        }
         Some(Commands::RebuildMessages { default_username }) => {
             actions::rebuild_messages::rebuild_messages(
                 config,

@@ -10,7 +10,7 @@ use axum::{
 };
 use blake2::{Blake2b512, Digest};
 use chrono::DateTime;
-use diesel::{RunQueryDsl, SelectableHelper};
+use diesel::{Connection, RunQueryDsl, SelectableHelper};
 use mail_parser::MessageParser;
 use persy::PersyId;
 
@@ -109,11 +109,14 @@ async fn index_message(
             content_hash: content_hash.clone(),
         };
 
-        diesel::insert_into(messages::table)
-            .values(&new_message)
-            .returning(Messages::as_returning())
-            .get_result(conn)
-            .map_err(|_| CentaureissiError::RelationalDatabaseError())?;
+        conn.transaction(|conn| {
+            diesel::insert_into(messages::table)
+                .values(&new_message)
+                .returning(Messages::as_returning())
+                .get_result(conn)?;
+            diesel::result::QueryResult::Ok(())
+        })
+        .map_err(|_| CentaureissiError::RelationalDatabaseError())?;
 
         // Insert email to blob transaction
         let mut blob_write_txn = context.blob_db.begin()?;
