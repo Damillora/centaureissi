@@ -53,10 +53,23 @@ pub struct MessageResponse {
 
     pub is_html_mail: bool,
     pub is_text_mail: bool,
+    pub has_attachments: bool,
     pub subject: String,
 }
 
 #[derive(Serialize)]
 pub struct MessageContentResponse {
     pub content: String,
+}
+
+#[derive(Serialize)]
+pub struct MessageAttachmentResponse {
+    pub items: Vec<MessageAttachmentResponseItem>,
+    pub total_items: usize,
+}
+
+#[derive(Serialize)]
+pub struct MessageAttachmentResponseItem {
+    pub id: usize,
+    pub name: String,
 }

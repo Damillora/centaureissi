@@ -13,6 +13,11 @@ pub struct LoginRequest {
 }
 
 #[derive(Deserialize)]
+pub struct SignPathRequest {
+    pub path: String,
+}
+
+#[derive(Deserialize)]
 pub struct UserUpdateRequest {
     pub username: String,
 }
@@ -28,4 +33,9 @@ pub struct SearchRequest {
     pub q: String,
     pub page: Option<usize>,
     pub per_page: Option<usize>,
+}
+
+#[derive(Deserialize)]
+pub struct DownloadTokenRequest {
+    pub token: String,
 }

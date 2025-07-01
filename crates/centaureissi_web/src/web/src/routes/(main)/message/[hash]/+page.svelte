@@ -1,7 +1,12 @@
 <script lang="ts">
     const { data } = $props();
     import { afterNavigate } from "$app/navigation";
-    import { getMessageByType, getMessageDetail } from "$lib/api";
+    import {
+        downloadAttachment,
+        getMessageByType,
+        getMessageDetail,
+        tokenSign,
+    } from "$lib/api";
     import { secondsInDay } from "date-fns/constants";
     import { onMount } from "svelte";
     import { format, formatDistanceToNow } from "date-fns";
@@ -15,6 +20,7 @@
     let message_types: string[] = $state([]);
     let selected_type = $state("");
     let content = $state("");
+    let attachments = $state([]);
 
     const getDetail = async () => {
         const response = await getMessageDetail(data.hash);
@@ -27,6 +33,9 @@
         }
         if (message_data.is_text_mail) {
             newtypes.push("text");
+        }
+        if (message_data.has_attachments) {
+            newtypes.push("attachments");
         }
         newtypes.push("raw");
 
@@ -43,9 +52,19 @@
     const loadMessage = async (message_type: string) => {
         loading_content = true;
         const response = await getMessageByType(data.hash, message_type);
-
-        content = response.content;
+        if (response.items) {
+            // Attachments have items instead of content
+            attachments = response.items;
+        } else {
+            content = response.content;
+        }
         loading_content = false;
+    };
+    const downloadAttachmentLink = async (id: number) => {
+        const path = `/${data.hash}/attachment/${id}`;
+
+        const token = await tokenSign(path);
+        await downloadAttachment(data.hash, id, token);
     };
 
     onMount(async () => {
@@ -156,6 +175,21 @@
                                     {:else if selected_type === "text"}
                                         <div class="content">
                                             <pre>{content}</pre>
+                                        </div>
+                                    {:else if selected_type === "attachments"}
+                                        <div class="panel">
+                                            {#each attachments as attachment}
+                                                <a
+                                                    class="panel-block"
+                                                    href={"#"}
+                                                    onclick={() =>
+                                                        downloadAttachmentLink(
+                                                            attachment.id,
+                                                        )}
+                                                >
+                                                    {attachment.name}
+                                                </a>
+                                            {/each}
                                         </div>
                                     {:else}
                                         <div class="content">

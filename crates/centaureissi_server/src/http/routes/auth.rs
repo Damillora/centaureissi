@@ -15,20 +15,24 @@ use crate::{
         context::CentaureissiContext,
         errors::CentaureissiError,
         middlewares,
-        models::{auth::Claims, requests::LoginRequest, responses::LoginResponse},
+        models::{
+            auth::Claims,
+            requests::{LoginRequest, SignPathRequest},
+            responses::LoginResponse,
+        },
     },
 };
 
 pub fn router(state: Arc<CentaureissiContext>) -> Router<Arc<CentaureissiContext>> {
     let unprotected_router = Router::new().route("/login", post(login));
 
-    let protected_router =
-        Router::new()
-            .route("/token", post(get_token))
-            .layer(middleware::from_fn_with_state(
-                state,
-                middlewares::authorization_middleware,
-            ));
+    let protected_router = Router::new()
+        .route("/token", post(get_token))
+        .route("/token/sign", post(get_token_sign))
+        .layer(middleware::from_fn_with_state(
+            state,
+            middlewares::authorization_middleware,
+        ));
 
     return unprotected_router.merge(protected_router);
 }
@@ -94,6 +98,40 @@ async fn get_token(
     let iat: usize = now.timestamp() as usize;
     let claims = Claims {
         aud: "centaureissi".to_string(),
+        iss: "centaureissi-api".to_string(),
+        exp: exp,
+        iat: iat,
+        name: user.username,
+        sub: user.id,
+    };
+
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_ref()),
+    )
+    .map_err(|_| {
+        CentaureissiError::AuthError(
+            String::from("Failure to decode token"),
+            StatusCode::FORBIDDEN,
+        )
+    })?;
+
+    Ok(Json(LoginResponse { token: token }))
+}
+
+async fn get_token_sign(
+    State(context): State<Arc<CentaureissiContext>>,
+    Extension(user): Extension<User>,
+    Json(input): Json<SignPathRequest>,
+) -> Result<Json<LoginResponse>, CentaureissiError> {
+    let secret = context.config.auth_secret.clone();
+    let now = Utc::now();
+    let expire: chrono::TimeDelta = Duration::hours(24);
+    let exp: usize = (now + expire).timestamp() as usize;
+    let iat: usize = now.timestamp() as usize;
+    let claims = Claims {
+        aud: input.path.to_string(),
         iss: "centaureissi-api".to_string(),
         exp: exp,
         iat: iat,

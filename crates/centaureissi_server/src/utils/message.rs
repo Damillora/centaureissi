@@ -1,4 +1,4 @@
-use mail_parser::Message;
+use mail_parser::{Message, MimeHeaders};
 
 pub struct MessageModel {
     pub user_id: i64,
@@ -12,12 +12,22 @@ pub struct MessageModel {
     pub content: String,
     pub is_html_mail: bool,
     pub is_text_mail: bool,
+    pub has_attachments: bool,
 }
 
 pub struct MessageContentModel {
     pub content: String,
 }
 
+pub struct MessageAttachModel {
+    pub name: String,
+    pub content: Vec<u8>,
+}
+
+pub struct MessageAttachment {
+    pub id: usize,
+    pub name: String,
+}
 pub fn create_message_model_from_message(message_user_id: i32, msg: Message) -> MessageModel {
     let from_data: Vec<String> = match msg.from() {
         Some(from) => from
@@ -85,6 +95,7 @@ pub fn create_message_model_from_message(message_user_id: i32, msg: Message) -> 
 
     let is_html_mail = msg.html_body_count() > 0;
     let is_text_mail = msg.text_body_count() > 0;
+    let has_attachments = msg.attachment_count() > 0;
 
     // Schema Fields
     let hash = schema.get_field("hash").unwrap();
@@ -108,6 +119,7 @@ pub fn create_message_model_from_message(message_user_id: i32, msg: Message) -> 
 
         is_html_mail: is_html_mail,
         is_text_mail: is_text_mail,
+        has_attachments: has_attachments,
         content: mail_contents_data.join("\n\n"),
     };
 }
@@ -130,5 +142,32 @@ pub fn create_message_content_model_from_message(html: bool, msg: Message) -> Me
         MessageContentModel {
             content: mail_contents_data.join("\n\n"),
         }
+    }
+}
+
+pub fn create_message_attachment_list_from_message(msg: Message) -> Vec<MessageAttachment> {
+    let mail_attachments: Vec<MessageAttachment> = msg
+        .attachments()
+        .enumerate()
+        .map(|(i, item)| MessageAttachment {
+            id: i,
+            name: item.attachment_name().unwrap_or("Attachment").to_string(),
+        })
+        .collect();
+
+    mail_attachments
+}
+pub fn create_message_attachment_content_model_from_message(
+    idx: usize,
+    msg: Message,
+) -> MessageAttachModel {
+    let mail_contents_attachment = msg.attachment(idx).unwrap();
+
+    MessageAttachModel {
+        name: mail_contents_attachment
+            .attachment_name()
+            .unwrap_or("Attachmennt")
+            .to_string(),
+        content: mail_contents_attachment.contents().to_vec(),
     }
 }

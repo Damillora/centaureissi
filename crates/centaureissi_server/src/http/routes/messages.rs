@@ -3,9 +3,9 @@ use std::sync::Arc;
 use axum::{
     Extension, Json, Router,
     extract::{Multipart, Path, State},
-    http::StatusCode,
+    http::{StatusCode, header},
     middleware,
-    response::IntoResponse,
+    response::{AppendHeaders, IntoResponse},
     routing::{get, post},
 };
 use blake2::{Blake2b512, Digest};
@@ -24,7 +24,10 @@ use crate::{
         context::CentaureissiContext,
         errors::CentaureissiError,
         middlewares,
-        models::responses::{MessageContentResponse, MessageResponse},
+        models::responses::{
+            MessageAttachmentResponse, MessageAttachmentResponseItem, MessageContentResponse,
+            MessageResponse,
+        },
     },
     search, utils,
 };
@@ -38,12 +41,24 @@ pub fn router(state: Arc<CentaureissiContext>) -> Router<Arc<CentaureissiContext
         .route("/{message_hash}/raw", get(read_message_raw))
         .route("/{message_hash}/text", get(read_message_text))
         .route("/{message_hash}/html", get(read_message_html))
+        .route("/{message_hash}/attachments", get(read_message_attachments))
         .layer(middleware::from_fn_with_state(
-            state,
+            state.clone(),
             middlewares::authorization_middleware,
         ));
+    let protected_download_router = Router::new()
+        .route(
+            "/{message_hash}/attachment/{index}",
+            get(read_message_attachment_content),
+        )
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            middlewares::authorization_sign_middleware,
+        ));
 
-    return unprotected_router.merge(protected_router);
+    return unprotected_router
+        .merge(protected_router)
+        .merge(protected_download_router);
 }
 
 async fn index_message(
@@ -132,8 +147,6 @@ async fn read_message_info(
     Extension(user): Extension<User>,
     Path(message_hash): Path<String>,
 ) -> Result<impl IntoResponse, CentaureissiError> {
-    println!("{}", message_hash);
-
     let blob_id = context
         .blob_db
         .one::<String, PersyId>(BLOB_INDEX, &message_hash)
@@ -169,6 +182,7 @@ async fn read_message_info(
 
                     is_html_mail: message_doc.is_html_mail,
                     is_text_mail: message_doc.is_text_mail,
+                    has_attachments: message_doc.has_attachments,
                     subject: message_doc.subject,
                 }));
             } else {
@@ -187,8 +201,6 @@ async fn read_message_raw(
     Extension(user): Extension<User>,
     Path(message_hash): Path<String>,
 ) -> Result<impl IntoResponse, CentaureissiError> {
-    println!("{}", message_hash);
-
     let blob_id = context
         .blob_db
         .one::<String, PersyId>(BLOB_INDEX, &message_hash)
@@ -222,8 +234,6 @@ async fn read_message_html(
     Extension(user): Extension<User>,
     Path(message_hash): Path<String>,
 ) -> Result<impl IntoResponse, CentaureissiError> {
-    println!("{}", message_hash);
-
     let blob_id = context
         .blob_db
         .one::<String, PersyId>(BLOB_INDEX, &message_hash)
@@ -266,8 +276,6 @@ async fn read_message_text(
     Extension(user): Extension<User>,
     Path(message_hash): Path<String>,
 ) -> Result<impl IntoResponse, CentaureissiError> {
-    println!("{}", message_hash);
-
     let blob_id = context
         .blob_db
         .one::<String, PersyId>(BLOB_INDEX, &message_hash)
@@ -294,6 +302,105 @@ async fn read_message_text(
                 return Ok(Json(MessageContentResponse {
                     content: message_doc.content,
                 }));
+            } else {
+                return Err(CentaureissiError::MessageError());
+            }
+        } else {
+            return Err(CentaureissiError::MessageNotFound());
+        }
+    } else {
+        return Err(CentaureissiError::MessageNotFound());
+    }
+}
+
+async fn read_message_attachments(
+    State(context): State<Arc<CentaureissiContext>>,
+    Extension(user): Extension<User>,
+    Path(message_hash): Path<String>,
+) -> Result<impl IntoResponse, CentaureissiError> {
+    let blob_id = context
+        .blob_db
+        .one::<String, PersyId>(BLOB_INDEX, &message_hash)
+        .unwrap();
+
+    if let Some(blob_id) = blob_id {
+        let blob_contents = context.blob_db.read(BLOB_TABLE, &blob_id).unwrap();
+
+        if let Some(contents) = blob_contents {
+            let mut uncompressed = Vec::<u8>::new();
+
+            let is_compressed = !zstd::stream::copy_decode(&*contents, &mut uncompressed).is_err();
+
+            if !is_compressed {
+                uncompressed = contents;
+            }
+
+            let parsed_msg = MessageParser::default().parse(&uncompressed);
+
+            if let Some(msg) = parsed_msg {
+                let message_attachments: Vec<MessageAttachmentResponseItem> =
+                    utils::message::create_message_attachment_list_from_message(msg)
+                        .into_iter()
+                        .map(|msg| MessageAttachmentResponseItem {
+                            id: msg.id,
+                            name: msg.name,
+                        })
+                        .collect();
+                let message_attachment_count = message_attachments.len();
+
+                return Ok(Json(MessageAttachmentResponse {
+                    items: message_attachments,
+                    total_items: message_attachment_count,
+                }));
+            } else {
+                return Err(CentaureissiError::MessageError());
+            }
+        } else {
+            return Err(CentaureissiError::MessageNotFound());
+        }
+    } else {
+        return Err(CentaureissiError::MessageNotFound());
+    }
+}
+
+async fn read_message_attachment_content(
+    State(context): State<Arc<CentaureissiContext>>,
+    Extension(user): Extension<User>,
+    Path((message_hash, index)): Path<(String, usize)>,
+) -> Result<impl IntoResponse, CentaureissiError> {
+    let blob_id = context
+        .blob_db
+        .one::<String, PersyId>(BLOB_INDEX, &message_hash)
+        .unwrap();
+
+    if let Some(blob_id) = blob_id {
+        let blob_contents = context.blob_db.read(BLOB_TABLE, &blob_id).unwrap();
+
+        if let Some(contents) = blob_contents {
+            let mut uncompressed = Vec::<u8>::new();
+
+            let is_compressed = !zstd::stream::copy_decode(&*contents, &mut uncompressed).is_err();
+
+            if !is_compressed {
+                uncompressed = contents;
+            }
+
+            let parsed_msg = MessageParser::default().parse(&uncompressed);
+
+            if let Some(msg) = parsed_msg {
+                let message_attachment =
+                    utils::message::create_message_attachment_content_model_from_message(
+                        index, msg,
+                    );
+
+                let headers = [
+                    (header::CONTENT_TYPE, "application/octet-stream"),
+                    (
+                        header::CONTENT_DISPOSITION,
+                        &format!("attachment; filename=\"{:?}\"", message_attachment.name),
+                    ),
+                ];
+                return Ok((headers, message_attachment.content).into_response());
             } else {
                 return Err(CentaureissiError::MessageError());
             }

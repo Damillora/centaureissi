@@ -180,3 +180,29 @@ export async function getMessageByType(
   });
   return response.data;
 }
+
+export async function tokenSign(path: string) {
+  const endpoint = url + "/api/auth/token/sign";
+  const response = await axios({
+    url: endpoint,
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + current_token,
+      "Content-Type": "application/json",
+    },
+    data: JSON.stringify({
+      path,
+    }),
+  });
+  return response.data.token;
+}
+
+export async function downloadAttachment(
+  message_id: string,
+  id: number,
+  token: string,
+) {
+  const endpoint =
+    url + `/api/messages/${message_id}/attachment/${id}?token=${token}`;
+  window.open(endpoint);
+}
